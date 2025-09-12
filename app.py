@@ -40,9 +40,6 @@ camera_stats = {
     "fps": 0
 }
 
-# YOLO model will be initialized in the thread (thread-safe approach)
-model = None
-
 # Setup directories
 UPLOAD_FOLDER = os.path.join(os.getcwd(), 'static', 'uploads')
 PROCESSED_FOLDER = os.path.join(os.getcwd(), 'static', 'processed')
@@ -57,16 +54,17 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
 
 # Initialize YOLO
-yolo_infer = YOLOInference(model_path='runs/detect/yolo11x_head12/weights/best.pt')
+yolo_infer = YOLOInference(model_path='runs/detect/yolo11x_head12/weights/best.pt')  # Update with your model path
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request):
     return templates.TemplateResponse("index.html", {"request": request})
 
+# --- Feature Control Endpoints ---
 @app.get("/toggle_heatmap")
 async def toggle_heatmap():
     yolo_infer.set_heatmap_enabled(not yolo_infer.enable_heat_map)
-    return RedirectResponse(url="/live_preview", status_code=302)
+    return RedirectResponse(url="/live_camera", status_code=302)
 
 @app.get("/live_camera", response_class=HTMLResponse)
 async def live_camera(request: Request):

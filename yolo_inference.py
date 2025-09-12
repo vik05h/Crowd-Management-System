@@ -3,7 +3,7 @@ import torch
 import time
 from ultralytics import YOLO
 from deep_sort_realtime.deepsort_tracker import DeepSort
-import requests
+import threading
 import os
 import numpy as np
 from sklearn.linear_model import LinearRegression
@@ -51,6 +51,9 @@ class YOLOInference:
 
         # Heatmap toggle
         self.enable_heat_map = False
+        self.density_map = None
+        self.latest_frame = None
+        self.frame_lock = threading.Lock()
 
         # Grid-based zooming
         self.zoom_row = None
@@ -59,9 +62,61 @@ class YOLOInference:
         # Store last processed overlay frame
         self.last_processed_overlay = None
 
+        # Heatmap
+        self.enable_heat_map = False
+        self.density_map = None
+
+        # Threading lock
+        self.frame_lock = threading.Lock()
+
     def set_heatmap_enabled(self, state: bool):
         self.enable_heat_map = state
-        print(f"[INFO] Heat map enabled: {self.enable_heat_map}")
+        if not state: # Reset density map when turned off
+            if self.density_map is not None:
+                self.density_map.fill(0)
+        print(f"[INFO] Heatmap enabled: {self.enable_heat_map}")
+
+    def set_zoom_cell(self, row: int, col: int):
+        if row < 0 or col < 0:
+            self.zoom_row, self.zoom_col = None, None
+            print("[INFO] Zoom reset.")
+        else:
+            self.zoom_row, self.zoom_col = row, col
+            print(f"[INFO] Zoom cell set to row={row}, col={col}")
+
+    def get_zoomed_subimage(self):
+        """Returns a magnified subimage of the latest frame."""
+        with self.frame_lock:
+            if self.latest_frame is None or self.zoom_row is None or self.zoom_col is None:
+                return np.zeros((240, 320, 3), dtype=np.uint8) # Return a blank image
+        
+        height, width = self.latest_frame.shape[:2]
+        cell_height = height // self.NUM_GRID_ROWS
+        cell_width = width // self.NUM_GRID_COLS
+        
+        start_y, end_y = self.zoom_row * cell_height, (self.zoom_row + 1) * cell_height
+        start_x, end_x = self.zoom_col * cell_width, (self.zoom_col + 1) * cell_width
+        
+        subimg = self.latest_frame[start_y:end_y, start_x:end_x]
+        return cv2.resize(subimg, (width // 2, height // 2), interpolation=cv2.INTER_LINEAR)
+
+
+    def _draw_overlays(self, frame, people_count):
+        """Helper function to draw stats and optional heatmap/grid."""
+        # Draw heatmap if enabled
+        if self.enable_heat_map and self.density_map is not None:
+            heatmap_viz = cv2.applyColorMap(
+                cv2.normalize(self.density_map, None, 0, 255, cv2.NORM_MINMAX).astype(np.uint8),
+                cv2.COLORMAP_JET
+            )
+            frame = cv2.addWeighted(frame, 0.6, heatmap_viz, 0.4, 0)
+            # Decay the heatmap over time
+            self.density_map *= 0.97
+            
+        # Draw stats
+        cv2.putText(frame, f"People Count: {people_count}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+        return frame
+
 
     def set_zoom_cell(self, row: int, col: int):
         """Set the grid cell (row, col) to magnify; if negative, reset."""
