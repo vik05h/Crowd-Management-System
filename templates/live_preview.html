@@ -16,30 +16,97 @@
       padding: 0;
       box-sizing: border-box;
     }
+    :root {
+      --bg-dark: #0b0f17;
+      --card-bg: #131b2a;
+      --card-border: #1e293b;
+      --text-main: #f1f5f9;
+      --text-muted: #94a3b8;
+      --accent-emerald: #10b981;
+      --accent-cyan: #06b6d4;
+      --accent-amber: #f59e0b;
+      --accent-rose: #ef4444;
+      --accent-blue: #3b82f6;
+    }
     body {
-      background: linear-gradient(135deg, #edf6ff 0%, #e6f2ff 100%);
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      color: #333;
+      background: var(--bg-dark);
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      color: var(--text-main);
       min-height: 100vh;
       overflow-x: hidden;
+    }
+
+    /* Command Navigation */
+    .command-nav {
+      background: #0f172a;
+      border-bottom: 1px solid var(--card-border);
+      padding: 0.75rem 1.5rem;
+      margin-bottom: 0.75rem;
+    }
+    .brand-title {
+      font-weight: 700;
+      font-size: 1.15rem;
+      letter-spacing: -0.02em;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      text-decoration: none;
+    }
+    .brand-badge {
+      font-size: 0.65rem;
+      font-weight: 600;
+      padding: 0.2rem 0.45rem;
+      border-radius: 4px;
+      background: rgba(16, 185, 129, 0.15);
+      color: var(--accent-emerald);
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .nav-links {
+      display: flex;
+      gap: 0.75rem;
+      align-items: center;
+    }
+    .nav-btn {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-size: 0.88rem;
+      font-weight: 500;
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .nav-btn:hover {
+      color: #ffffff;
+      background: rgba(255, 255, 255, 0.05);
+    }
+    .nav-btn.active {
+      color: #ffffff;
+      background: #1e293b;
+      border: 1px solid #334155;
     }
 
     /* Compact Header */
     .page-header {
       text-align: center;
-      padding: 1rem 0 0.5rem 0;
+      padding: 0.5rem 0 0.5rem 0;
       opacity: 0;
     }
     .page-title {
-      font-size: 1.8rem;
+      font-size: 1.6rem;
       font-weight: 700;
-      color: #102a43;
-      margin-bottom: 0.25rem;
+      color: #ffffff;
+      margin-bottom: 0.2rem;
     }
     .page-subtitle {
-      font-size: 0.9rem;
-      color: #486581;
-      font-weight: 500;
+      font-size: 0.85rem;
+      color: var(--text-muted);
+      font-weight: 400;
     }
 
     /* Main Container - Optimized for viewport */
@@ -54,11 +121,12 @@
 
     /* Compact Stats Bar */
     .stats-bar {
-      background: white;
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
       border-radius: 0.75rem;
       padding: 0.75rem;
-      margin-bottom: 1rem;
-      box-shadow: 0 2px 15px rgba(0, 0, 0, 0.06);
+      margin-bottom: 0.75rem;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
       opacity: 0;
       flex-shrink: 0;
     }
@@ -69,13 +137,13 @@
     .stat-number {
       font-size: 1.5rem;
       font-weight: 700;
-      color: #007bff;
+      color: var(--accent-cyan);
       display: block;
       line-height: 1.2;
     }
     .stat-label {
-      font-size: 0.75rem;
-      color: #6c757d;
+      font-size: 0.72rem;
+      color: var(--text-muted);
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
@@ -91,12 +159,13 @@
     /* Stream Container - Responsive height */
     .stream-container {
       position: relative;
-      background: white;
-      padding: 1rem;
+      background: #05080f;
+      border: 1px solid var(--card-border);
+      padding: 0.5rem;
       border-radius: 1rem;
-      box-shadow: 0 4px 20px rgba(0, 123, 255, 0.1);
-      margin-bottom: 1rem;
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
+      box-shadow: 0 6px 30px rgba(0, 0, 0, 0.4);
+      margin-bottom: 0.75rem;
+      transition: border-color 0.3s ease;
       cursor: pointer;
       opacity: 0;
       flex: 1;
@@ -106,8 +175,7 @@
       min-height: 300px;
     }
     .stream-container:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 6px 25px rgba(0, 123, 255, 0.15);
+      border-color: #3b82f6;
     }
     .stream-container img {
       width: 100%;
@@ -115,7 +183,7 @@
       max-height: 100%;
       object-fit: contain;
       border-radius: 0.75rem;
-      border: 2px solid #f8f9fa;
+      border: 1px solid #1e293b;
     }
 
     /* Compact Controls */
@@ -344,9 +412,151 @@
         min-height: 200px;
       }
     }
+
+    /* Security Alert Banner */
+    .alert-banner {
+      background: linear-gradient(135deg, #b91c1c, #dc2626);
+      color: white;
+      border-radius: 0.75rem;
+      padding: 0.85rem 1.25rem;
+      margin-bottom: 0.75rem;
+      box-shadow: 0 4px 20px rgba(220, 38, 38, 0.4);
+      animation: alertPulse 1.4s infinite;
+      z-index: 100;
+      flex-shrink: 0;
+    }
+    @keyframes alertPulse {
+      0%, 100% { box-shadow: 0 0 15px rgba(185, 28, 28, 0.6); }
+      50% { box-shadow: 0 0 30px rgba(239, 68, 68, 0.9); }
+    }
+    .stream-alert-border {
+      border: 3px solid #dc2626 !important;
+      animation: borderFlash 1s infinite alternate;
+    }
+    @keyframes borderFlash {
+      from { border-color: #dc2626; }
+      to { border-color: #f59e0b; }
+    }
+
+    /* Incident Drawer */
+    .incident-drawer {
+      position: fixed;
+      top: 0;
+      right: -450px;
+      width: 420px;
+      height: 100vh;
+      background: #0f172a;
+      border-left: 1px solid var(--card-border);
+      box-shadow: -5px 0 30px rgba(0, 0, 0, 0.6);
+      z-index: 10000;
+      transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      display: flex;
+      flex-direction: column;
+    }
+    .incident-drawer.open {
+      right: 0;
+    }
+    .incident-drawer-header {
+      padding: 1.1rem 1.25rem;
+      background: #0b0f17;
+      border-bottom: 1px solid var(--card-border);
+      color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .incident-drawer-body {
+      flex: 1;
+      overflow-y: auto;
+      padding: 1rem;
+      background: #0b0f17;
+    }
+    .incident-card {
+      background: #131b2a;
+      border-radius: 0.5rem;
+      border: 1px solid var(--card-border);
+      color: #f1f5f9;
+      padding: 0.85rem;
+      margin-bottom: 0.85rem;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+    .incident-card.unack {
+      border-left: 4px solid #ef4444;
+    }
+    .incident-card.ack {
+      border-left: 4px solid #10b981;
+      opacity: 0.85;
+    }
+    .incident-thumb {
+      width: 100%;
+      height: 140px;
+      object-fit: cover;
+      border-radius: 0.35rem;
+      margin-top: 0.5rem;
+      border: 1px solid #334155;
+      cursor: pointer;
+    }
+    .drawer-backdrop {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.65);
+      z-index: 9999;
+    }
+    .drawer-backdrop.active {
+      display: block;
+    }
+
+    /* Slider Container */
+    .threshold-control {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: #131b2a;
+      border: 1px solid var(--card-border);
+      color: var(--text-main);
+      padding: 0.4rem 0.9rem;
+      border-radius: 0.5rem;
+      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+      vertical-align: middle;
+      margin: 0 0.3rem;
+    }
   </style>
 </head>
 <body>
+
+  <!-- Top Tactical Navigation -->
+  <nav class="command-nav">
+    <div class="d-flex justify-content-between align-items-center">
+      <div class="d-flex align-items-center gap-3">
+        <a href="/" class="brand-title">
+          <i class="bi bi-shield-shaded text-primary"></i>
+          <span>CrowdPulse CMS</span>
+        </a>
+        <span class="brand-badge">Surveillance Core</span>
+      </div>
+
+      <div class="nav-links">
+        <a href="/live_preview" class="nav-btn active">
+          <i class="bi bi-camera-video"></i>
+          <span>Live Surveillance</span>
+        </a>
+        <a href="/video_studio" class="nav-btn">
+          <i class="bi bi-film"></i>
+          <span>Video Studio</span>
+        </a>
+        <a href="/" class="nav-btn">
+          <i class="bi bi-grid-1x2"></i>
+          <span>Overview</span>
+        </a>
+        <a href="/docs" target="_blank" class="nav-btn">
+          <i class="bi bi-code-slash"></i>
+          <span>API Docs</span>
+        </a>
+      </div>
+    </div>
+  </nav>
+
   <div class="live-container">
     <!-- Compact Header -->
     <div class="page-header">
@@ -384,6 +594,27 @@
       </div>
     </div>
 
+    <!-- Security Alert Strobe Banner -->
+    <div id="securityAlertBanner" class="alert-banner d-none">
+      <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
+        <div class="d-flex align-items-center gap-2">
+          <i class="bi bi-exclamation-triangle-fill fs-4 text-warning"></i>
+          <div>
+            <strong class="text-uppercase tracking-wider">Sustained Overcrowding Alert:</strong>
+            <span>Count (<span id="alertCountBadge">0</span>) has exceeded threshold (<span id="alertThresholdBadge">15</span>) for over 3 seconds!</span>
+          </div>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <button class="btn btn-sm btn-outline-light" onclick="toggleSirenMute()">
+            <i class="bi bi-volume-up-fill" id="bannerSirenIcon"></i> <span id="bannerSirenText">Mute</span>
+          </button>
+          <button class="btn btn-sm btn-light text-danger fw-bold" onclick="openIncidentDrawer()">
+            Review Incidents
+          </button>
+        </div>
+      </div>
+    </div>
+
     <!-- Main Content Area -->
     <div class="main-content">
       <!-- Stream Container -->
@@ -393,10 +624,37 @@
     </div>
 
     <!-- Compact Controls -->
-    <div class="controls-section">
+    <div class="controls-section d-flex align-items-center justify-content-center flex-wrap gap-2">
       <button class="toggle-btn" id="heatmapBtn" onclick="toggleHeatmap()">
         <i class="bi bi-thermometer-half me-1"></i><span id="heatmapBtnText">Enable Heat Map</span>
       </button>
+
+      <!-- Dynamic Alert Threshold Slider -->
+      <div class="threshold-control">
+        <span class="small fw-semibold text-secondary">Limit: <strong id="thresholdVal" class="text-danger">15</strong></span>
+        <input type="range" class="form-range" id="thresholdRange" min="5" max="60" value="15" style="width: 100px;" oninput="onThresholdInput(this.value)" onchange="onThresholdChange(this.value)">
+      </div>
+
+      <!-- Siren Mute Toggle -->
+      <button class="toggle-btn btn-secondary" id="sirenBtn" onclick="toggleSirenMute()">
+        <i class="bi bi-volume-up-fill me-1" id="sirenIcon"></i><span id="sirenBtnText">Siren On</span>
+      </button>
+
+      <!-- Incident History Drawer Toggle -->
+      <button class="toggle-btn btn-warning text-dark position-relative" onclick="openIncidentDrawer()">
+        <i class="bi bi-shield-exclamation me-1"></i>Incidents <span id="incidentBadge" class="badge bg-danger ms-1">0</span>
+      </button>
+
+      <!-- Webhook Dispatch Settings -->
+      <button class="toggle-btn btn-secondary" onclick="openWebhookModal()">
+        <i class="bi bi-link-45deg me-1"></i>Webhook
+      </button>
+
+      <!-- Resolution Toggle -->
+      <button class="toggle-btn btn-secondary" id="resBtn" onclick="toggleResolution()">
+        <i class="bi bi-aspect-ratio me-1"></i><span id="resText">640px</span>
+      </button>
+
       <button class="toggle-btn btn-secondary" onclick="window.location.href='/'">
         <i class="bi bi-house me-1"></i>Dashboard
       </button>
@@ -414,16 +672,17 @@
             <h6><i class="bi bi-mouse me-2"></i>Instructions</h6>
             <ul class="info-list">
               <li><i class="bi bi-cursor"></i>Click video to zoom into areas</li>
-              <li><i class="bi bi-eye"></i>Blue boxes show detected people</li>
+              <li><i class="bi bi-eye"></i>Green boxes show detected people</li>
               <li><i class="bi bi-thermometer"></i>Toggle heatmap for density view</li>
+              <li><i class="bi bi-bell"></i>Adjust Limit slider to set alert trigger</li>
             </ul>
           </div>
           <div class="info-section">
             <h6><i class="bi bi-gear me-2"></i>System Status</h6>
             <ul class="info-list">
-              <li><i class="bi bi-cpu"></i>YOLO11x: Active</li>
-              <li><i class="bi bi-camera-video"></i>Feed: Live</li>
-              <li><i class="bi bi-shield-check"></i>Monitoring: Enabled</li>
+              <li><i class="bi bi-cpu"></i>Model: YOLO26m (Fine-Tuned Transfer)</li>
+              <li><i class="bi bi-camera-video"></i>Feed: Live 25 FPS</li>
+              <li><i class="bi bi-shield-check"></i>Monitoring & Security Alerts: Active</li>
             </ul>
           </div>
         </div>
@@ -439,6 +698,44 @@
         <button class="close" id="modalClose">&times;</button>
       </div>
       <img src="{{ url_for('zoom_feed') }}" alt="Zoomed Cell" id="zoomedImg" />
+    </div>
+  </div>
+
+  <!-- Webhook Configuration Modal -->
+  <div id="webhookModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title"><i class="bi bi-broadcast me-2 text-primary"></i>Security Webhook Dispatch</h5>
+        <button class="close" onclick="closeWebhookModal()">&times;</button>
+      </div>
+      <div class="modal-body p-0 py-3">
+        <p class="small text-muted mb-3">
+          Configure an automated webhook URL (Slack, Discord, Microsoft Teams, or custom API) that will receive JSON payloads whenever sustained overcrowding is detected.
+        </p>
+        <div class="mb-3">
+          <label class="form-label small fw-semibold text-secondary">Webhook Endpoint URL</label>
+          <input type="url" class="form-control" id="webhookInput" placeholder="https://hooks.slack.com/services/... or Discord/Teams webhook" />
+        </div>
+        <div class="d-flex justify-content-end gap-2">
+          <button class="btn btn-secondary btn-sm" onclick="closeWebhookModal()">Cancel</button>
+          <button class="btn btn-primary btn-sm" onclick="saveWebhook()">Save Webhook</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Incident Drawer & Backdrop -->
+  <div id="drawerBackdrop" class="drawer-backdrop" onclick="closeIncidentDrawer()"></div>
+  <div id="incidentDrawer" class="incident-drawer">
+    <div class="incident-drawer-header">
+      <div class="d-flex align-items-center gap-2">
+        <i class="bi bi-shield-check fs-5 text-primary"></i>
+        <h6 class="mb-0 fw-bold">Security Incidents Log</h6>
+      </div>
+      <button type="button" class="btn-close btn-close-white" onclick="closeIncidentDrawer()"></button>
+    </div>
+    <div class="incident-drawer-body" id="incidentList">
+      <div class="text-center text-muted py-4 small">Loading incidents...</div>
     </div>
   </div>
 
@@ -548,16 +845,19 @@
     }
 
     // Toggle heatmap with animation and update button text
-    function toggleHeatmap() {
+    async function toggleHeatmap() {
       const btn = document.getElementById('heatmapBtn');
       gsap.to(btn, { scale: 0.95, duration: 0.1, yoyo: true, repeat: 1 });
-      fetch('/toggle_heatmap')
-        .then(() => {
-          heatmapEnabled = !heatmapEnabled;
+      try {
+        const response = await fetch('/toggle_heatmap', { method: 'POST' });
+        if (response.ok) {
+          const data = await response.json();
+          heatmapEnabled = Boolean(data.heatmap_enabled);
           updateHeatmapBtn();
-          // Optionally, reload the video feed to reflect changes
-          document.getElementById('mainImage').src = "{{ url_for('video_feed') }}" + "?t=" + Date.now();
-        });
+        }
+      } catch (err) {
+        console.error('Failed to toggle heatmap:', err);
+      }
     }
 
     // Uptime counter
@@ -572,18 +872,256 @@
       }, 1000);
     }
 
-    // Update stats dynamically
+    // Audio Siren Synthesizer using Web Audio API
+    let audioCtx = null;
+    let sirenInterval = null;
+    let sirenMuted = false;
+
+    function initAudio() {
+      if (!audioCtx) {
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      }
+    }
+
+    function startSiren() {
+      if (sirenMuted || sirenInterval) return;
+      initAudio();
+      if (audioCtx.state === 'suspended') {
+        audioCtx.resume();
+      }
+      let highTone = true;
+      sirenInterval = setInterval(() => {
+        try {
+          const osc = audioCtx.createOscillator();
+          const gain = audioCtx.createGain();
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(highTone ? 880 : 660, audioCtx.currentTime);
+          highTone = !highTone;
+          gain.gain.setValueAtTime(0.09, audioCtx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.32);
+          osc.connect(gain);
+          gain.connect(audioCtx.destination);
+          osc.start();
+          osc.stop(audioCtx.currentTime + 0.35);
+        } catch (e) {
+          console.error("Audio siren error:", e);
+        }
+      }, 350);
+    }
+
+    function stopSiren() {
+      if (sirenInterval) {
+        clearInterval(sirenInterval);
+        sirenInterval = null;
+      }
+    }
+
+    function toggleSirenMute() {
+      sirenMuted = !sirenMuted;
+      const sirenIcon = document.getElementById('sirenIcon');
+      const sirenText = document.getElementById('sirenBtnText');
+      const bannerIcon = document.getElementById('bannerSirenIcon');
+      const bannerText = document.getElementById('bannerSirenText');
+
+      if (sirenMuted) {
+        stopSiren();
+        if (sirenIcon) sirenIcon.className = 'bi bi-volume-mute-fill me-1 text-danger';
+        if (sirenText) sirenText.textContent = 'Muted';
+        if (bannerIcon) bannerIcon.className = 'bi bi-volume-mute-fill me-1';
+        if (bannerText) bannerText.textContent = 'Unmute';
+      } else {
+        if (sirenIcon) sirenIcon.className = 'bi bi-volume-up-fill me-1 text-success';
+        if (sirenText) sirenText.textContent = 'Siren On';
+        if (bannerIcon) bannerIcon.className = 'bi bi-volume-up-fill me-1';
+        if (bannerText) bannerText.textContent = 'Mute';
+      }
+    }
+
+    // Dynamic Alert Threshold Handlers
+    function onThresholdInput(val) {
+      document.getElementById('thresholdVal').textContent = val;
+    }
+
+    async function onThresholdChange(val) {
+      document.getElementById('thresholdVal').textContent = val;
+      try {
+        await fetch('/api/settings/threshold', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ threshold: parseInt(val, 10) })
+        });
+      } catch (err) {
+        console.error('Failed to update threshold:', err);
+      }
+    }
+
+    // Inference Resolution Toggle
+    let currentResolution = 640;
+    async function toggleResolution() {
+      currentResolution = currentResolution === 640 ? 1024 : 640;
+      document.getElementById('resText').textContent = currentResolution + 'px';
+      try {
+        await fetch('/api/settings/imgsz', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ imgsz: currentResolution })
+        });
+      } catch (err) {
+        console.error('Failed to update resolution:', err);
+      }
+    }
+
+    // Webhook Configuration Modal Handlers
+    const webhookModal = document.getElementById('webhookModal');
+    async function openWebhookModal() {
+      webhookModal.style.display = 'block';
+      setTimeout(() => webhookModal.classList.add('show'), 10);
+      try {
+        const res = await fetch('/api/settings');
+        if (res.ok) {
+          const settings = await res.json();
+          document.getElementById('webhookInput').value = settings.webhook_url || '';
+        }
+      } catch (err) {}
+    }
+
+    function closeWebhookModal() {
+      webhookModal.classList.remove('show');
+      setTimeout(() => webhookModal.style.display = 'none', 250);
+    }
+
+    async function saveWebhook() {
+      const url = document.getElementById('webhookInput').value.trim();
+      try {
+        await fetch('/api/settings/webhook', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ webhook_url: url })
+        });
+        closeWebhookModal();
+      } catch (err) {
+        alert('Failed to save webhook configuration.');
+      }
+    }
+
+    // Incident Drawer Handlers
+    const incidentDrawer = document.getElementById('incidentDrawer');
+    const drawerBackdrop = document.getElementById('drawerBackdrop');
+
+    function openIncidentDrawer() {
+      incidentDrawer.classList.add('open');
+      drawerBackdrop.classList.add('active');
+      loadIncidents();
+    }
+
+    function closeIncidentDrawer() {
+      incidentDrawer.classList.remove('open');
+      drawerBackdrop.classList.remove('active');
+    }
+
+    async function loadIncidents() {
+      const container = document.getElementById('incidentList');
+      try {
+        const res = await fetch('/api/incidents');
+        if (!res.ok) throw new Error('Failed to fetch');
+        const data = await res.json();
+        const incidents = data.incidents || [];
+
+        if (incidents.length === 0) {
+          container.innerHTML = '<div class="text-center text-muted py-4 small">No security incidents logged yet. System is safe.</div>';
+          return;
+        }
+
+        container.innerHTML = incidents.map(inc => {
+          const isAck = Boolean(inc.acknowledged);
+          const cardClass = isAck ? 'incident-card ack' : 'incident-card unack';
+          return `
+            <div class="${cardClass}" id="card-${inc.id}">
+              <div class="d-flex justify-content-between align-items-center mb-1">
+                <span class="badge ${isAck ? 'bg-success' : 'bg-danger'} text-uppercase" style="font-size: 0.65rem;">
+                  ${isAck ? 'Acknowledged' : 'Critical Alert'}
+                </span>
+                <span class="small text-muted" style="font-size: 0.75rem;">${inc.timestamp}</span>
+              </div>
+              <div class="small fw-semibold text-dark">
+                Crowd Count: <span class="text-danger fw-bold">${inc.people_count}</span> (Limit: ${inc.threshold})
+              </div>
+              <a href="${inc.snapshot_url}" target="_blank" title="Click to view full snapshot">
+                <img src="${inc.snapshot_url}" class="incident-thumb" alt="Incident Snapshot" onerror="this.style.display='none'" />
+              </a>
+              <div class="mt-2 d-flex justify-content-end">
+                ${isAck ? '<span class="small text-success"><i class="bi bi-check-all me-1"></i>Handled</span>' : 
+                  `<button class="btn btn-xs btn-outline-danger py-0 px-2 small" onclick="acknowledgeIncident('${inc.id}')">Acknowledge</button>`
+                }
+              </div>
+            </div>
+          `;
+        }).join('');
+      } catch (err) {
+        container.innerHTML = '<div class="text-center text-danger py-4 small">Failed to load incidents.</div>';
+      }
+    }
+
+    async function acknowledgeIncident(id) {
+      try {
+        const res = await fetch(`/api/incidents/${id}/acknowledge`, { method: 'POST' });
+        if (res.ok) {
+          loadIncidents();
+        }
+      } catch (err) {
+        console.error('Failed to acknowledge incident:', err);
+      }
+    }
+
+    // Update stats dynamically from backend
+    async function fetchStats() {
+      try {
+        const res = await fetch('/camera_stats');
+        if (res.ok) {
+          const stats = await res.json();
+          const count = stats.people_count !== undefined ? stats.people_count : 0;
+          document.getElementById('peopleCount').textContent = count;
+          document.getElementById('densityLevel').textContent = stats.density_level || 'Low';
+          const alertEl = document.getElementById('alertStatus');
+          const alertStatus = stats.alert_status || 'Safe';
+          alertEl.textContent = alertStatus;
+          if (alertStatus === 'Alert') {
+            alertEl.style.color = '#dc3545';
+          } else if (alertStatus === 'Caution') {
+            alertEl.style.color = '#fd7e14';
+          } else {
+            alertEl.style.color = '#007bff';
+          }
+
+          // Incident count badge
+          const unack = stats.unacknowledged_incidents || 0;
+          document.getElementById('incidentBadge').textContent = unack;
+
+          // Sustained Alert Banner and Siren Strobe Handling
+          const banner = document.getElementById('securityAlertBanner');
+          const mainImage = document.getElementById('mainImage');
+          const isTriggered = Boolean(stats.active_alert_triggered);
+
+          if (isTriggered) {
+            banner.classList.remove('d-none');
+            document.getElementById('alertCountBadge').textContent = count;
+            document.getElementById('alertThresholdBadge').textContent = stats.alert_threshold || 15;
+            if (mainImage) mainImage.classList.add('stream-alert-border');
+            startSiren();
+          } else {
+            banner.classList.add('d-none');
+            if (mainImage) mainImage.classList.remove('stream-alert-border');
+            stopSiren();
+          }
+        }
+      } catch (err) {
+        console.error('Failed to fetch camera stats:', err);
+      }
+    }
+
     function updateStats() {
-      setInterval(() => {
-        const count = Math.floor(Math.random() * 15) + 20; // 20-35 range
-        document.getElementById('peopleCount').textContent = count;
-        
-        const density = count < 25 ? 'Low' : count < 30 ? 'Medium' : 'High';
-        document.getElementById('densityLevel').textContent = density;
-        
-        const status = count > 32 ? 'Alert' : 'Safe';
-        document.getElementById('alertStatus').textContent = status;
-      }, 4000);
+      fetchStats();
+      setInterval(fetchStats, 1000);
     }
   </script>
 </body>

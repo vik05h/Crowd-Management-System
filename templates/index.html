@@ -504,12 +504,12 @@
 
         if (response.ok) {
           const result = await response.json();
-          uploadStatus.textContent = `Analysis Complete! ${result.message || 'Crowd analysis results are ready.'}`;
+          uploadStatus.textContent = "Upload successful! Opening Video Processing Studio...";
           uploadStatus.className = 'mt-3 text-center status-message text-success fw-bold';
           gsap.fromTo(uploadStatus, {scale: 0.9, opacity:0}, {scale: 1, opacity:1, duration: 0.4, ease: 'back.out(1.7)'});
           setTimeout(() => {
-            window.location.href = '/live_preview';
-          }, 2000);
+            window.location.href = result.redirect_url || '/video_studio';
+          }, 800);
         } else {
           const errorResult = await response.json().catch(() => ({ detail: "Server error. Please try again." }));
           uploadStatus.textContent = `Error ${response.status}: ${errorResult.detail || response.statusText}`;

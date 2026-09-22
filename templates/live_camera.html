@@ -407,6 +407,8 @@
           element.textContent = newValue;
           if (elementId === 'alertStatus' && newValue === 'Alert') {
             element.style.color = '#dc3545';
+          } else if (elementId === 'alertStatus' && newValue === 'Caution') {
+            element.style.color = '#fd7e14';
           } else if (elementId === 'alertStatus') {
             element.style.color = '#007bff';
           }

@@ -1,7 +1,7 @@
 [project]
 name = "crowd-management-system"
 version = "0.1.0"
-description = "Add your description here"
+description = "Real-time Crowd Management System"
 readme = "README.md"
 requires-python = ">=3.10"
 dependencies = [
@@ -12,11 +12,41 @@ dependencies = [
     "numpy<2.0",
     "opencv-python==4.7.0.72",
     "python-multipart>=0.0.20",
-    "torch>=2.7.1",
-    "torchaudio>=2.7.1",
-    "torchvision>=0.22.1",
-    "ultralytics>=8.3.150",
+    "torch",
+    "torchaudio",
+    "torchvision",
+    "ultralytics>=8.4.0",
     "scikit-learn>=1.6.1",
     "uvicorn>=0.34.3",
     "setuptools>=80.9.0",
+    "imageio-ffmpeg>=0.6.0",
 ]
+
+[dependency-groups]
+dev = [
+    "httpx>=0.28.1",
+    "pytest>=9.1.1",
+]
+
+[tool.uv.sources]
+torch = [
+    { index = "pytorch-cu124" },
+]
+torchvision = [
+    { index = "pytorch-cu124" },
+]
+torchaudio = [
+    { index = "pytorch-cu124" },
+]
+
+[[tool.uv.index]]
+name = "pytorch-cu124"
+url = "https://download.pytorch.org/whl/cu124"
+explicit = true
+
+[tool.pytest.ini_options]
+pythonpath = ["."]
+testpaths = ["tests"]
+
+[tool.fastapi]
+entrypoint = "app:app"
