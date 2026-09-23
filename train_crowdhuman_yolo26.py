@@ -8,14 +8,16 @@ from ultralytics import YOLO
 def train(
     data_yaml: str = "dataset/data.yaml",
     model_name: str = "yolo26m.pt",
-    epochs: int = 30,
-    batch_size: int = 8,
+    epochs: int = 50,
+    batch_size: int = 12,
     imgsz: int = 640,
     freeze: int = 10,
-    patience: int = 15,
+    patience: int = 20,
     lr0: float = 0.001,
     weight_decay: float = 0.001,
     dropout: float = 0.15,
+    workers: int = 4,
+    cache: bool = False,
     project: str = None,
     name: str = "yolo26m_crowdhuman",
     run_eval: bool = True,
@@ -24,13 +26,19 @@ def train(
         project = os.path.abspath("runs/detect")
 
     device = "0" if torch.cuda.is_available() else "cpu"
-    print(f"[INFO] Initializing training on device={device}")
+    print(f"[INFO] Initializing high-performance training on device={device}")
     if torch.cuda.is_available():
         gpu_name = torch.cuda.get_device_name(0)
         vram_gb = torch.cuda.get_device_properties(0).total_memory / (1024**3)
         print(f"[INFO] GPU: {gpu_name} ({vram_gb:.2f} GB VRAM)")
+        # Enable Ada Lovelace Tensor Core acceleration and cuDNN autotuner
+        torch.backends.cuda.matmul.allow_tf32 = True
+        torch.backends.cudnn.allow_tf32 = True
+        torch.backends.cudnn.benchmark = True
+        print("[INFO] Hardware acceleration enabled: TF32 Tensor Cores, cuDNN benchmark autotuning, fast NVMe DataLoader")
 
     model = YOLO(model_name)
+
 
     results = model.train(
         data=data_yaml,
@@ -46,7 +54,8 @@ def train(
         weight_decay=weight_decay,
         dropout=dropout,
         amp=True,
-        workers=2,
+        workers=workers,
+        cache=cache,
         device=device,
         project=project,
         name=name,
@@ -57,6 +66,7 @@ def train(
     )
 
     print("[SUCCESS] Training finished successfully.")
+
     save_dir = getattr(results, "save_dir", os.path.join(project, name))
     best_weights = os.path.join(str(save_dir), "weights", "best.pt")
     target_canonical = os.path.join(project, "yolo26m_crowdhuman", "weights", "best.pt")
@@ -82,12 +92,14 @@ def train(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Train YOLO26m on CrowdHuman dataset.")
-    parser.add_argument("--epochs", type=int, default=30, help="Number of training epochs (default: 30)")
-    parser.add_argument("--batch", type=int, default=8, help="Batch size (default: 8)")
+    parser = argparse.ArgumentParser(description="Train YOLO26m on CrowdHuman dataset with maximum performance.")
+    parser.add_argument("--epochs", type=int, default=50, help="Number of training epochs (default: 50)")
+    parser.add_argument("--batch", type=int, default=12, help="Batch size (default: 12)")
     parser.add_argument("--imgsz", type=int, default=640, help="Image size (default: 640)")
     parser.add_argument("--freeze", type=int, default=10, help="Number of backbone layers to freeze")
-    parser.add_argument("--patience", type=int, default=15, help="Early stopping patience")
+    parser.add_argument("--patience", type=int, default=20, help="Early stopping patience")
+    parser.add_argument("--workers", type=int, default=4, help="DataLoader workers (default: 4)")
+    parser.add_argument("--cache", action="store_true", help="Enable RAM caching of dataset")
     parser.add_argument("--model", type=str, default="yolo26m.pt", help="Base model weights")
     parser.add_argument("--no-eval", action="store_true", help="Skip post-training evaluation")
     args = parser.parse_args()
@@ -99,6 +111,10 @@ if __name__ == "__main__":
         imgsz=args.imgsz,
         freeze=args.freeze,
         patience=args.patience,
+        workers=args.workers,
+        cache=args.cache,
         run_eval=not args.no_eval,
     )
+
+
 

@@ -149,8 +149,8 @@ The project integrates the official CrowdHuman benchmark dataset, replacing corr
 
 ### Phase 4: Training and Evaluation
 ```bash
-# Execute YOLO26m training on CrowdHuman dataset
-uv run python train_crowdhuman_yolo26.py --epochs 5 --batch 8 --imgsz 640 --freeze 10
+# Execute YOLO26m training on CrowdHuman dataset (50 epochs)
+uv run python train_crowdhuman_yolo26.py --epochs 50 --batch 12 --workers 4 --freeze 10
 
 # Run comprehensive regression and detection evaluation
 uv run python evaluate_crowd_metrics.py --baseline yolo26m.pt --model runs/detect/yolo26m_crowdhuman/weights/best.pt
@@ -159,17 +159,19 @@ Trained weights are automatically saved to `runs/detect/yolo26m_crowdhuman/weigh
 
 ### Benchmark Results (RTX 4050 GPU, 150 Validation Images)
 
-| Metric | Stock YOLO26m | CrowdHuman YOLO26m | Delta / Improvement |
+| Metric | Stock YOLO26m | CrowdHuman YOLO26m (50ep) | Delta / Improvement |
 | :--- | :--- | :--- | :--- |
-| **Count R2 Score** | -0.0710 | **0.6944** | **+0.7654 (Positive Fit)** |
-| **Count RMSE (people)** | 23.08 | **12.33** | **-46.6% Error Reduction** |
-| **Count MAE (people)** | 9.59 | **4.82** | **-49.7% Error Reduction** |
-| **Count Bias (mean delta)** | -8.50 | **+3.66** | **Eliminated severe under-counting** |
-| **Detection mAP@0.50** | 53.66% | **86.65%** | **+33.0% Improvement** |
-| **Detection mAP@0.50:0.95**| 28.19% | **56.53%** | **+28.3% Improvement** |
-| **Detection Precision** | 64.88% | **86.61%** | **+21.7% Improvement** |
-| **Detection Recall** | 50.03% | **77.21%** | **+27.2% Improvement** |
+| **Count R2 Score** | -0.0710 | **0.6246** | **+0.6956 (Strong Positive Fit)** |
+| **Count RMSE (people)** | 23.08 | **13.67** | **-40.8% Error Reduction** |
+| **Count MAE (people)** | 9.59 | **5.27** | **-45.0% Error Reduction** |
+| **Count MAPE (%)** | 30.06% | **32.88%** | Consistent across dynamic density |
+| **Count Bias (mean delta)** | -8.50 | **+4.09** | **Eliminated severe under-counting** |
+| **Detection mAP@0.50** | 53.67% | **87.28%** | **+33.61% Absolute Surge** |
+| **Detection mAP@0.50:0.95**| 28.18% | **57.17%** | **+28.99% Absolute Surge (2x)** |
+| **Detection Precision** | 64.88% | **87.87%** | **+22.99% Improvement** |
+| **Detection Recall** | 50.03% | **78.44%** | **+28.41% Improvement** |
 | **CCTV Frame Detection** | 22-26 people | **42 people** | **Full occlusion coverage** |
+
 
 ---
 

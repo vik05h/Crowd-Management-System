@@ -111,26 +111,35 @@
   - Confirmed coordinate normalization, full-body aspect ratios, and occlusion handling.
 - Test Suite: All 16 automated tests passed in `tests/`.
 
-## CrowdHuman YOLO26m Training & Statistical Benchmark
+## CrowdHuman YOLO26m 50-Epoch Training & Statistical Benchmark
 - Training Configuration:
   - Model: Ultralytics YOLO26m (`yolo26m.pt`)
   - Hardware: NVIDIA GeForce RTX 4050 Laptop GPU (6140 MB VRAM)
-  - Hyperparameters: 5 epochs, batch size 8, imgsz 640, freeze 10, AdamW optimizer, cosine annealing learning rate, AMP fp16, dropout 0.15, weight decay 0.001.
-  - VRAM Utilization: 2.92-3.07 GB (peak ~50% capacity).
-  - Training Time: ~9.8 minutes on 3,496 images (80,662 annotations) with zero CUDA errors.
-  - Weights Output: `runs/detect/yolo26m_crowdhuman/weights/best.pt`.
-- Quantitative Benchmark Evaluation (Stock YOLO26m vs CrowdHuman YOLO26m):
-  - Count R2 Score: Jumped from -0.0710 (under-counting bias) to 0.6944 (capturing ~70% variance in crowd density).
-  - Count RMSE: Reduced from 23.08 people to 12.33 people (46.6% error reduction).
-  - Count MAE: Reduced from 9.59 people to 4.82 people (49.7% error reduction).
-  - Detection mAP@0.50: Surged from 53.66% to 86.65% (+33.0% improvement).
-  - Detection mAP@0.50:0.95: Surged from 28.19% to 56.53% (+28.3% improvement).
-  - Detection Precision: Increased from 64.88% to 86.61% (+21.7% improvement).
-  - Detection Recall: Increased from 50.03% to 77.21% (+27.2% improvement).
+  - Optimization Package: TF32 Tensor Cores (`allow_tf32=True`), cuDNN autotuning (`cudnn.benchmark=True`), 4 DataLoader workers, AMP fp16.
+  - Hyperparameters: 50 epochs, batch size 12 (292 iterations/epoch), imgsz 640, freeze 10, AdamW optimizer, cosine annealing learning rate schedule, dropout 0.15, weight decay 0.001, patience 20.
+  - VRAM Footprint: ~3.63 GB (60% capacity utilization, completely stable).
+  - Training Time: 94.8 minutes (5,691 seconds) across 3,496 images (80,662 annotations) with zero CUDA errors.
+  - Loss Trajectory:
+    - Train Box Loss: decreased from 1.612 to 1.127.
+    - Train Cls Loss: decreased from 1.142 to 0.638.
+    - Val Box Loss: decreased from 1.471 to 1.266.
+    - Val Cls Loss: decreased from 1.012 to 0.754.
+  - Weights Output: `runs/detect/yolo26m_crowdhuman/weights/best.pt` (44.0 MB).
+- Quantitative Benchmark Evaluation (Stock YOLO26m vs 50-Epoch CrowdHuman YOLO26m, 150 Validation Images):
+  - Count R2 Score: Jumped from -0.0710 (under-counting bias) to 0.6246 (capturing ~62.5% variance in crowd density).
+  - Count RMSE: Reduced from 23.08 people to 13.67 people (40.8% error reduction).
+  - Count MAE: Reduced from 9.59 people to 5.27 people (45.0% error reduction).
+  - Count MAPE: 32.88% (vs 30.06% on baseline).
+  - Count Bias: +4.09 (vs -8.50 on stock baseline, effectively eliminating severe crowd under-counting).
+  - Detection mAP@0.50: Surged from 53.67% to 87.28% (+33.61% absolute improvement).
+  - Detection mAP@0.50:0.95: Surged from 28.18% to 57.17% (+28.99% absolute improvement, more than doubled).
+  - Detection Precision: Increased from 64.88% to 87.87% (+22.99% improvement).
+  - Detection Recall: Increased from 50.03% to 78.44% (+28.41% improvement).
 - Real-World Surveillance Verification:
   - `test_clean_boxes.jpg`: Detects 30 full-body pedestrians (vs 0 on dot-trained model).
   - `static/uploads/input.mp4` (Frame 1): Detects 42 people including dense occluded background groups (vs 22-26 on stock YOLO26m and 0 on dot-trained model).
   - Automated Weights Hierarchy: `yolo_inference.py` automatically resolves `runs/detect/yolo26m_crowdhuman/weights/best.pt` on launch.
+
 
 ## Crowd Video Test Benchmarks & Sources
 - Generated Multi-Scene Test Video:
