@@ -198,10 +198,21 @@ Trained weights are automatically saved to `runs/detect/yolo26m_crowdhuman/weigh
 
 ---
 
+## Security Architecture & Hardening
+
+The CMS backend adheres to enterprise defensive standards:
+- **File Upload Protection**: Enforces video extension whitelist (`.mp4`, `.avi`, `.mov`, `.mkv`), chunked memory-safe streaming, maximum file size limitation (250 MB), and batch concurrency locking (`409 Conflict`).
+- **Server-Side Request Forgery (SSRF) Defense**: Validates external webhook targets, prohibiting local, private (RFC1918), loopback (`127.0.0.0/8`, `::1`), and cloud metadata (`169.254.169.254`) IP addresses.
+- **Path Traversal Containment**: Enforces strict filesystem containment checks on incident snapshots and processed video delivery routes.
+- **Hardened CORS Policy**: Disallows wildcard credential propagation (`allow_credentials=False`) to prevent cross-origin session exploitation.
+
+---
+
 ## Automated Test Suite
 
 Run the full pytest suite:
 ```bash
 uv run pytest tests/ -v
 ```
-All 20 unit and integration tests validate the API endpoints, alert logic, bounding box sanitization, and batch inference pipeline.
+All 25 unit, integration, and security tests validate API routing, alert engines, dataset bounding box sanitization, batch inference pipelines, SSRF protection, and upload validation.
+

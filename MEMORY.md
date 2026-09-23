@@ -176,3 +176,20 @@
   5. Test Coverage:
      - Added 4 automated integration tests in `tests/test_api.py` (`test_video_studio_page`, `test_processing_status_endpoint`, `test_processed_videos_endpoint`, `test_upload_endpoint`).
      - Test suite contains 20 passing unit and integration tests executing in under 6 seconds.
+
+## Security Hardening & Vulnerability Remediation
+- Vulnerabilities Audited & Remediated:
+  1. Unrestricted File Upload & Memory Exhaustion (High):
+     - Implemented extension whitelist (`.mp4`, `.avi`, `.mov`, `.mkv`) rejecting scripts, executables, HTML, and SVG.
+     - Enforced `MAX_UPLOAD_SIZE = 250MB` with 1MB streaming chunk buffers, eliminating memory exhaustion / OOM server crashes.
+     - Added alphanumeric filename sanitization and concurrency conflict check (`409 Conflict` if batch job is already running).
+  2. Server-Side Request Forgery (SSRF) in Webhooks (High):
+     - Built `validate_webhook_url()` verifying URL scheme (`http`/`https`), rejecting loopback (`127.0.0.0/8`, `localhost`, `::1`), private RFC1918 subnets (`10.0.0.0/8`, `172.16.0.0/12`, `192.168.0.0/16`), and cloud metadata IP ranges (`169.254.169.254`, `metadata.google.internal`).
+     - Re-validated in `dispatch_webhook_notification()` before issuing background HTTP requests.
+  3. Permissive CORS Hardening (Medium):
+     - Hardened CORS policy by setting `allow_credentials=False` with wildcard origin to prevent CSRF-style credential leakage.
+  4. Path Traversal Containment (Medium):
+     - Added `os.path.commonpath` / `startswith` containment checks on `GET /api/snapshots/{filename}` and `GET /processed/{filename}`.
+  5. Automated Security Test Suite:
+     - Added `tests/test_security.py` with 5 targeted tests for SSRF blocked IPs, valid webhook URLs, prohibited upload extensions, and snapshot/video path traversal payloads. All 25 tests pass in test suite.
+

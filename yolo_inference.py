@@ -582,10 +582,20 @@ class YOLOInference:
             )
             self.batch_thread.start()
 
+    @property
+    def batch_processing_active(self) -> bool:
+        """Check whether batch video processing is actively running in background."""
+        return bool(
+            self.batch_thread is not None
+            and self.batch_thread.is_alive()
+            and self.batch_job.get("active", False)
+        )
+
     def get_batch_status(self) -> Dict[str, Any]:
         """Return a snapshot of current batch processing progress and analytics."""
         with self.batch_thread_lock:
             return dict(self.batch_job)
+
 
     def _run_batch_processing(self, input_path: str, output_path: str) -> None:
         """Process video frame-by-frame, write annotated MP4, and remux to standard web H.264."""

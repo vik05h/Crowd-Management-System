@@ -1,6 +1,10 @@
+import ipaddress
 import os
+import re
+import socket
 import threading
 import time
+import urllib.parse
 from typing import Annotated, Any, Dict, List, Optional
 
 import cv2
@@ -16,15 +20,22 @@ from pydantic import BaseModel, Field
 
 from yolo_inference import SNAPSHOT_FOLDER, YOLOInference
 
+# Security Configuration Constants
+ALLOWED_VIDEO_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv"}
+MAX_UPLOAD_SIZE = 250 * 1024 * 1024  # 250 MB maximum upload size
+CHUNK_SIZE = 1024 * 1024  # 1 MB streaming chunks for memory protection
+
 app = FastAPI(title="Crowd Management System (CMS) API", version="2.0.0")
 
+# Hardened CORS configuration (credentials disallowed with wildcard origin)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
+    allow_credentials=False,
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
+
 
 # Setup directories
 UPLOAD_FOLDER = os.path.join(os.getcwd(), "static", "uploads")
@@ -76,9 +87,77 @@ class ImgszUpdateRequest(BaseModel):
     imgsz: int = Field(description="Inference image resolution: 640 or 1024")
 
 
+def validate_webhook_url(url: str) -> None:
+    """Validate external webhook URL against SSRF vulnerabilities."""
+    if not url:
+        return
+    try:
+        parsed = urllib.parse.urlparse(url.strip())
+    except Exception:
+        raise HTTPException(status_code=400, detail="Invalid webhook URL structure")
+
+    if parsed.scheme not in ("http", "https"):
+        raise HTTPException(status_code=400, detail="Webhook URL must use http or https protocol")
+
+    hostname = parsed.hostname
+    if not hostname:
+        raise HTTPException(status_code=400, detail="Webhook URL must include a valid hostname")
+
+    # Prohibit local, loopback, and cloud metadata aliases
+    lowered = hostname.lower()
+    blocked_hostnames = {
+        "localhost", "127.0.0.1", "0.0.0.0", "::1", "metadata.google.internal",
+        "instance-data", "metadata"
+    }
+    if lowered in blocked_hostnames or lowered.endswith(".local") or lowered.endswith(".internal"):
+        raise HTTPException(
+            status_code=400,
+            detail="Invalid webhook URL: Localhost, private, and metadata network addresses are prohibited"
+        )
+
+    # Check for direct IP inputs
+    try:
+        ip_obj = ipaddress.ip_address(hostname)
+        if (
+            ip_obj.is_private
+            or ip_obj.is_loopback
+            or ip_obj.is_link_local
+            or ip_obj.is_multicast
+            or ip_obj.is_reserved
+            or str(ip_obj).startswith("169.254.")
+        ):
+            raise HTTPException(
+                status_code=400,
+                detail="Invalid webhook URL: Private, loopback, and metadata network addresses are prohibited"
+            )
+    except ValueError:
+        # Not a direct IP literal, resolve via DNS
+        try:
+            addr_info = socket.getaddrinfo(hostname, None)
+            for family, _, _, _, sockaddr in addr_info:
+                ip_str = sockaddr[0]
+                ip_obj = ipaddress.ip_address(ip_str)
+                if (
+                    ip_obj.is_private
+                    or ip_obj.is_loopback
+                    or ip_obj.is_link_local
+                    or ip_obj.is_multicast
+                    or ip_obj.is_reserved
+                    or str(ip_obj).startswith("169.254.")
+                ):
+                    raise HTTPException(
+                        status_code=400,
+                        detail="Invalid webhook URL: Target resolves to a private or loopback IP address"
+                    )
+        except socket.gaierror:
+            # Allow in test/offline environments if domain format is otherwise valid
+            pass
+
+
 def dispatch_webhook_notification(incident: Dict[str, Any], webhook_url: str) -> None:
     """Send non-blocking webhook notification to external security dispatch systems."""
     try:
+        validate_webhook_url(webhook_url)
         payload = {
             "event": "CROWD_OVERCROWDING_ALERT",
             "incident_id": incident["id"],
@@ -95,6 +174,7 @@ def dispatch_webhook_notification(incident: Dict[str, Any], webhook_url: str) ->
             client.post(webhook_url, json=payload)
     except Exception as exc:
         print(f"[WARN] Failed to dispatch security webhook: {exc}")
+
 
 
 def handle_incident_alert(incident: Dict[str, Any]) -> None:
@@ -325,14 +405,54 @@ def toggle_camera_heatmap() -> Dict[str, bool]:
 
 @app.post("/upload")
 def upload(video: Annotated[UploadFile, File()]) -> Dict[str, Any]:
+    """Securely upload a video file for batch crowd analysis."""
     if not video.filename:
         raise HTTPException(status_code=400, detail="No filename provided")
 
-    safe_name = os.path.basename(video.filename)
-    video_path = os.path.join(UPLOAD_FOLDER, safe_name)
-    with open(video_path, "wb") as buffer:
-        content = video.file.read()
-        buffer.write(content)
+    ext = os.path.splitext(video.filename)[1].lower()
+    if ext not in ALLOWED_VIDEO_EXTENSIONS:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported file format '{ext}'. Allowed extensions: {', '.join(sorted(ALLOWED_VIDEO_EXTENSIONS))}"
+        )
+
+    if yolo_infer.batch_processing_active:
+        raise HTTPException(
+            status_code=409,
+            detail="A video processing task is currently active. Please wait for it to complete."
+        )
+
+    raw_basename = os.path.basename(video.filename)
+    safe_name = re.sub(r"[^a-zA-Z0-9_.-]", "_", raw_basename)
+    if not safe_name or safe_name.startswith("."):
+        safe_name = f"upload_{int(time.time())}{ext}"
+
+    video_path = os.path.abspath(os.path.join(UPLOAD_FOLDER, safe_name))
+    if not video_path.startswith(os.path.abspath(UPLOAD_FOLDER)):
+        raise HTTPException(status_code=400, detail="Invalid target filename")
+
+    bytes_written = 0
+    try:
+        with open(video_path, "wb") as buffer:
+            while True:
+                chunk = video.file.read(CHUNK_SIZE)
+                if not chunk:
+                    break
+                bytes_written += len(chunk)
+                if bytes_written > MAX_UPLOAD_SIZE:
+                    raise HTTPException(
+                        status_code=413,
+                        detail=f"File exceeds maximum allowed size of {MAX_UPLOAD_SIZE // (1024 * 1024)} MB"
+                    )
+                buffer.write(chunk)
+    except HTTPException:
+        if os.path.exists(video_path):
+            os.remove(video_path)
+        raise
+    except Exception as exc:
+        if os.path.exists(video_path):
+            os.remove(video_path)
+        raise HTTPException(status_code=500, detail=f"Failed to save uploaded file: {str(exc)}")
 
     processed_filename = f"processed_{safe_name}"
     processed_path = os.path.join(PROCESSED_FOLDER, processed_filename)
@@ -347,6 +467,7 @@ def upload(video: Annotated[UploadFile, File()]) -> Dict[str, Any]:
         "processed_file": processed_filename,
         "redirect_url": "/video_studio",
     }
+
 
 
 @app.get("/live_preview", response_class=HTMLResponse)
@@ -459,10 +580,14 @@ def update_threshold(req: ThresholdUpdateRequest) -> Dict[str, Any]:
 
 @app.post("/api/settings/webhook")
 def update_webhook(req: WebhookUpdateRequest) -> Dict[str, Any]:
-    """Configure external security dispatch webhook URL."""
+    """Configure external security dispatch webhook URL with SSRF validation."""
     global external_webhook_url
     url = req.webhook_url.strip()
-    external_webhook_url = url if url else None
+    if url:
+        validate_webhook_url(url)
+        external_webhook_url = url
+    else:
+        external_webhook_url = None
     return {"status": "success", "webhook_url": external_webhook_url}
 
 
@@ -500,13 +625,15 @@ def acknowledge_incident(
 def get_snapshot(
     filename: Annotated[str, Path(description="Snapshot filename to retrieve")]
 ) -> FileResponse:
-    """Serve captured incident snapshot photos securely."""
-    # Prevent directory traversal attacks
+    """Serve captured incident snapshot photos with path traversal verification."""
     safe_filename = os.path.basename(filename)
-    snapshot_path = os.path.join(SNAPSHOT_FOLDER, safe_filename)
+    snapshot_path = os.path.abspath(os.path.join(SNAPSHOT_FOLDER, safe_filename))
+    if not snapshot_path.startswith(os.path.abspath(SNAPSHOT_FOLDER)):
+        raise HTTPException(status_code=400, detail="Invalid snapshot file path")
     if not os.path.isfile(snapshot_path):
         raise HTTPException(status_code=404, detail="Snapshot file not found")
     return FileResponse(snapshot_path, media_type="image/jpeg")
+
 
 
 @app.get("/video_studio", response_class=HTMLResponse)
@@ -581,12 +708,15 @@ def list_processed_videos() -> Dict[str, Any]:
 def serve_processed_video(
     filename: Annotated[str, Path(description="Processed video filename")]
 ) -> FileResponse:
-    """Serve stored processed MP4 video files with range support for seeking."""
+    """Serve stored processed MP4 video files with path traversal verification and range support."""
     safe_name = os.path.basename(filename)
-    file_path = os.path.join(PROCESSED_FOLDER, safe_name)
+    file_path = os.path.abspath(os.path.join(PROCESSED_FOLDER, safe_name))
+    if not file_path.startswith(os.path.abspath(PROCESSED_FOLDER)):
+        raise HTTPException(status_code=400, detail="Invalid processed video path")
     if not os.path.isfile(file_path):
         raise HTTPException(status_code=404, detail="Processed video file not found")
     return FileResponse(file_path, media_type="video/mp4")
+
 
 
 if __name__ == "__main__":

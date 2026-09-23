@@ -24,5 +24,6 @@ Remember to make the code optimized and easy to optimize
 - External Dispatch: Use non-blocking background threads or threadpools for external webhook dispatches (Slack, Discord, Teams).
 - Video Studio & Transcoding Standard: All batch video processing must output web-playable H.264 video with `yuv420p` pixel format and `+faststart` moov atom relocation via `imageio-ffmpeg` to ensure native HTML5 playback and instant scrubbing across all web browsers.
 - Operational Mode Separation: Keep Live Camera Surveillance (`/live_preview` with continuous looping, sirens, and live alerts) separate from Video Processing Studio (`/video_studio` with finite batch processing, real-time progress telemetry, and stored video library).
+- Security Hardening Standards: Always validate file upload extensions (`.mp4`, `.avi`, `.mov`, `.mkv`), stream uploads in chunks with size limits (<= 250MB), validate external webhook URLs against SSRF (block private RFC1918, loopback, and metadata ranges), and enforce path traversal containment (`os.path.commonpath` / `startswith`).
 - API Design: Adhere to FastAPI best practices (Annotated parameters, no ellipsis in defaults, asynchronous path routing with threadpools for blocking computer vision workloads).
 - Code Cleanliness: Strictly zero emojis in code, comments, and HTML templates across all files.
