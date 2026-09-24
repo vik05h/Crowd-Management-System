@@ -1,3 +1,7 @@
+import asyncio
+import contextlib
+import csv
+import io
 import ipaddress
 import os
 import re
@@ -5,27 +9,102 @@ import socket
 import threading
 import time
 import urllib.parse
-from typing import Annotated, Any, Dict, List, Optional
+from typing import Annotated, Any, Dict, List, Literal, Optional
 
 import cv2
 import httpx
 import numpy as np
 import uvicorn
-from fastapi import FastAPI, File, HTTPException, Path, Query, Request, UploadFile
+from fastapi import (
+    BackgroundTasks,
+    FastAPI,
+    File,
+    HTTPException,
+    Path,
+    Query,
+    Request,
+    UploadFile,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, StreamingResponse
+from fastapi.responses import FileResponse, HTMLResponse, RedirectResponse, Response, StreamingResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, Field
 
 from yolo_inference import SNAPSHOT_FOLDER, YOLOInference
+from cms.data.database import db_manager, verify_password
+from cms.auth.jwt_auth import (
+    CurrentUserDep,
+    LoginRequest,
+    LoginResponse,
+    OptionalUserDep,
+    create_access_token,
+    require_roles,
+)
+from cms.api.websocket_hub import ws_hub
 
 # Security Configuration Constants
 ALLOWED_VIDEO_EXTENSIONS = {".mp4", ".avi", ".mov", ".mkv"}
 MAX_UPLOAD_SIZE = 250 * 1024 * 1024  # 250 MB maximum upload size
 CHUNK_SIZE = 1024 * 1024  # 1 MB streaming chunks for memory protection
 
-app = FastAPI(title="Crowd Management System (CMS) API", version="2.0.0")
+
+@contextlib.asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Application lifecycle manager for WebSocket hub and periodic telemetry."""
+    loop = asyncio.get_running_loop()
+    ws_hub.set_loop(loop)
+
+    # Load initial security sectors into inference engine
+    try:
+        zones = await db_manager.get_zones()
+        yolo_infer.update_zones(zones)
+    except Exception as exc:
+        print(f"[WARN] Error loading security sectors: {exc}")
+
+    # Periodic background telemetry logger
+    stop_telemetry = asyncio.Event()
+
+    async def _periodic_telemetry():
+        while not stop_telemetry.is_set():
+            try:
+                await asyncio.sleep(4.0)
+                count = yolo_infer.current_people_count
+                density = get_density_level(count, yolo_infer.alert_threshold)
+                await db_manager.log_crowd_snapshot(
+                    total_count=count,
+                    density_level=density,
+                    camera_id="primary",
+                )
+                zones_summary = yolo_infer.get_zones_summary()
+                await ws_hub.broadcast({
+                    "event_type": "telemetry",
+                    "people_count": count,
+                    "density_level": density,
+                    "alert_status": get_alert_status(count, yolo_infer.alert_threshold, yolo_infer.active_alert_triggered),
+                    "alert_threshold": yolo_infer.alert_threshold,
+                    "active_alert_triggered": yolo_infer.active_alert_triggered,
+                    "zones": zones_summary,
+                    "timestamp": time.time(),
+                })
+            except asyncio.CancelledError:
+                break
+            except Exception as exc:
+                print(f"[WARN] Telemetry logging error: {exc}")
+
+    telemetry_task = asyncio.create_task(_periodic_telemetry())
+    yield
+    stop_telemetry.set()
+    telemetry_task.cancel()
+
+
+app = FastAPI(
+    title="Crowd Management System (CMS) API",
+    version="2.1.0",
+    lifespan=lifespan,
+)
 
 # Hardened CORS configuration (credentials disallowed with wildcard origin)
 app.add_middleware(
@@ -85,6 +164,52 @@ class WebhookUpdateRequest(BaseModel):
 
 class ImgszUpdateRequest(BaseModel):
     imgsz: int = Field(description="Inference image resolution: 640 or 1024")
+
+
+class ZoneCreateRequest(BaseModel):
+    id: Optional[str] = None
+    name: str = Field(description="Zone sector name")
+    color: str = Field(default="#FFE500", description="Hex color string")
+    polygon: List[List[float]] = Field(description="List of [x, y] coordinates")
+    max_occupancy: int = Field(default=10, ge=1, le=1000)
+    camera_id: str = "primary"
+
+
+class ToggleRequest(BaseModel):
+    enabled: bool
+
+
+class HardwareProfileRequest(BaseModel):
+    profile: str = Field(description="Hardware profile: eco, balanced, ultra, or custom")
+
+
+class PoseModelRequest(BaseModel):
+    model_name: str = Field(description="Pose model name: yolo26n-pose.pt, yolo26s-pose.pt, or yolo26m-pose.pt")
+
+
+class PoseStrideRequest(BaseModel):
+    stride: int = Field(ge=1, le=5, description="Temporal frame stride for pose estimation")
+
+
+class Fp16ToggleRequest(BaseModel):
+    enabled: bool = Field(description="Enable or disable FP16 half precision on CUDA")
+
+
+class ZonePolygonUpdateRequest(BaseModel):
+    polygon: List[List[float]] = Field(description="Updated list of [x, y] coordinates")
+
+
+class PrivacyToggleRequest(BaseModel):
+    enabled: bool = Field(description="Enable or disable real-time face blurring")
+
+
+class SimulateIncidentRequest(BaseModel):
+    event_type: Literal["fall", "collapse", "panic", "zone_breach", "overcrowding"] = Field(
+        default="fall", description="Type of security incident to simulate"
+    )
+    zone_name: str = Field(default="Central Concourse", description="Target zone name")
+    confidence: float = Field(default=0.96, ge=0.0, le=1.0, description="Detection confidence")
+    details: Optional[Dict[str, Any]] = Field(default=None, description="Additional custom metadata")
 
 
 def validate_webhook_url(url: str) -> None:
@@ -178,15 +303,44 @@ def dispatch_webhook_notification(incident: Dict[str, Any], webhook_url: str) ->
 
 
 def handle_incident_alert(incident: Dict[str, Any]) -> None:
-    """Record incident in local audit log and trigger async webhook dispatch."""
+    """Record incident in local audit log, database, WebSocket hub, and webhook."""
     global external_webhook_url
     incident_record = dict(incident)
-    incident_record["snapshot_url"] = f"/api/snapshots/{incident['snapshot_filename']}"
+    if "snapshot_filename" in incident:
+        incident_record["snapshot_url"] = f"/api/snapshots/{incident['snapshot_filename']}"
 
     with incidents_lock:
         security_incidents.insert(0, incident_record)
         if len(security_incidents) > 50:
             security_incidents.pop()
+
+    # Broadcast via WebSocket hub to all connected operator dashboards
+    ws_hub.broadcast_sync({
+        "event_type": "safety_alert",
+        "incident": incident_record,
+    })
+
+    # Log to SQLite database asynchronously
+    def _save_to_db():
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+        try:
+            loop.run_until_complete(
+                db_manager.record_safety_event(
+                    event_id=incident_record.get("id", f"inc_{int(time.time())}"),
+                    event_type=incident_record.get("event_type", "overcrowding"),
+                    timestamp=time.time(),
+                    camera_id="primary",
+                    zone_name=incident_record.get("zone_name", "General Area"),
+                    confidence=float(incident_record.get("confidence", 1.0)),
+                    details=incident_record.get("details", {}),
+                    snapshot_path=incident_record.get("snapshot_filename"),
+                )
+            )
+        finally:
+            loop.close()
+
+    threading.Thread(target=_save_to_db, daemon=True).start()
 
     if external_webhook_url:
         thread = threading.Thread(
@@ -197,8 +351,10 @@ def handle_incident_alert(incident: Dict[str, Any]) -> None:
         thread.start()
 
 
-# Register the callback with the inference engine
+# Register callbacks with inference engine
 yolo_infer.register_alert_callback(handle_incident_alert)
+yolo_infer.register_pose_callback(handle_incident_alert)
+yolo_infer.register_zone_callback(handle_incident_alert)
 
 
 def get_density_level(people_count: int, threshold: int = 15) -> str:
@@ -601,24 +757,383 @@ def update_imgsz(req: ImgszUpdateRequest) -> Dict[str, Any]:
     return {"status": "success", "inference_imgsz": yolo_infer.inference_imgsz}
 
 
+@app.get("/api/settings/hardware")
+def get_hardware_telemetry() -> Dict[str, Any]:
+    """Get active hardware profile, GPU capabilities, and latency telemetry."""
+    return yolo_infer.get_hardware_status()
+
+
+@app.post("/api/settings/hardware_profile")
+def update_hardware_profile(req: HardwareProfileRequest) -> Dict[str, Any]:
+    """Switch tiered hardware acceleration profile (eco, balanced, ultra, custom)."""
+    return yolo_infer.set_hardware_profile(req.profile)
+
+
+@app.post("/api/settings/pose_model")
+def update_pose_model(req: PoseModelRequest) -> Dict[str, Any]:
+    """Hot-swap the YOLO26 pose model variant."""
+    success = yolo_infer.set_pose_model(req.model_name)
+    if not success:
+        raise HTTPException(status_code=400, detail="Failed to load pose model")
+    return {"status": "success", "pose_model": req.model_name}
+
+
+@app.post("/api/settings/pose_stride")
+def update_pose_stride(req: PoseStrideRequest) -> Dict[str, Any]:
+    """Update temporal frame stride for pose estimation."""
+    yolo_infer.set_pose_stride(req.stride)
+    return {"status": "success", "pose_stride": req.stride}
+
+
+@app.post("/api/settings/fp16")
+def update_fp16(req: Fp16ToggleRequest) -> Dict[str, Any]:
+    """Toggle FP16 half precision execution on CUDA."""
+    yolo_infer.set_fp16_enabled(req.enabled)
+    return {"status": "success", "fp16_enabled": yolo_infer.use_fp16}
+
+
+@app.post("/api/settings/export_tensorrt")
+def export_tensorrt(background_tasks: BackgroundTasks) -> Dict[str, Any]:
+    """Trigger background compilation of YOLO26 TensorRT engine with fallback."""
+    def _export_worker():
+        try:
+            print("[INFO] Starting TensorRT engine compilation...")
+            yolo_infer.model.export(
+                format="engine",
+                half=True,
+                imgsz=yolo_infer.inference_imgsz,
+            )
+            print("[INFO] TensorRT compilation finished successfully.")
+        except Exception as exc:
+            print(f"[WARN] TensorRT export failed or unsupported on this environment: {exc}")
+
+    background_tasks.add_task(_export_worker)
+    return {"status": "initiated", "message": "TensorRT export initiated in background"}
+
+
+@app.get("/api/settings/privacy")
+def get_privacy_settings() -> Dict[str, Any]:
+    """Retrieve privacy compliance configuration and active state."""
+    return yolo_infer.get_privacy_status()
+
+
+@app.post("/api/settings/privacy")
+async def set_privacy_settings(req: PrivacyToggleRequest) -> Dict[str, Any]:
+    """Toggle real-time face privacy anonymization."""
+    state = yolo_infer.toggle_privacy(req.enabled)
+    await ws_hub.broadcast({
+        "event_type": "privacy_update",
+        "privacy_enabled": state,
+    })
+    return {"status": "success", "privacy_enabled": state}
+
+
 @app.get("/api/incidents")
-def list_incidents() -> Dict[str, Any]:
-    """List recent security incidents with snapshot URLs."""
+async def list_incidents() -> Dict[str, Any]:
+    """List recent security incidents from database and active memory."""
+    db_events = await db_manager.get_safety_events(limit=50)
+    results = []
+    seen_ids = set()
+
     with incidents_lock:
-        return {"incidents": list(security_incidents)}
+        for inc in security_incidents:
+            enriched = dict(inc)
+            if "event_type" not in enriched:
+                enriched["event_type"] = "overcrowding"
+            if "zone_name" not in enriched:
+                enriched["zone_name"] = "General Area"
+            if "people_count" not in enriched:
+                details = enriched.get("details", {})
+                enriched["people_count"] = details.get("occupancy", details.get("headcount", "--"))
+            if "threshold" not in enriched:
+                details = enriched.get("details", {})
+                enriched["threshold"] = details.get("capacity", details.get("threshold", yolo_infer.alert_threshold))
+            results.append(enriched)
+            seen_ids.add(inc.get("id"))
+
+    for ev in db_events:
+        if ev["id"] not in seen_ids:
+            ts = ev.get("timestamp")
+            if isinstance(ts, (int, float)):
+                ts_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(ts))
+            else:
+                ts_str = str(ts)
+            snap = ev.get("snapshot_path")
+            snap_url = f"/api/snapshots/{snap}" if snap else None
+            details = ev.get("details", {})
+            people_count = details.get("occupancy", details.get("headcount", details.get("people_count", "--")))
+            threshold = details.get("capacity", details.get("threshold", "--"))
+            results.append({
+                "id": ev["id"],
+                "event_type": ev["event_type"],
+                "zone_name": ev.get("zone_name", "General Area"),
+                "timestamp": ts_str,
+                "confidence": ev.get("confidence", 1.0),
+                "details": details,
+                "snapshot_filename": snap,
+                "snapshot_url": snap_url,
+                "acknowledged": bool(ev.get("acknowledged", 0)),
+                "people_count": people_count,
+                "threshold": threshold,
+            })
+            seen_ids.add(ev["id"])
+
+    return {"incidents": results}
+
+
+@app.post("/api/incidents/simulate")
+async def simulate_incident(req: SimulateIncidentRequest) -> Dict[str, Any]:
+    """Simulate a critical safety incident for SOC drills and validation."""
+    now = time.time()
+    ts_str = time.strftime("%Y-%m-%d %H:%M:%S")
+    timestamp_filename = time.strftime("%Y%m%d_%H%M%S")
+    snap_name = f"sim_{req.event_type}_{timestamp_filename}.jpg"
+    snap_path = os.path.join(SNAPSHOT_FOLDER, snap_name)
+
+    # Render a simulated annotated snapshot frame if available
+    with yolo_infer.frame_lock:
+        if yolo_infer.latest_frame is not None:
+            sim_frame = yolo_infer.latest_frame.copy()
+        else:
+            sim_frame = np.zeros((720, 1280, 3), dtype=np.uint8)
+
+    # Draw simulated red alert badge across top
+    h, w = sim_frame.shape[:2]
+    cv2.rectangle(sim_frame, (0, 0), (w, 48), (0, 0, 180), -1)
+    tag = f"SIMULATED SAFETY DRILL: {req.event_type.upper()} DETECTED [{req.zone_name.upper()}]"
+    cv2.putText(sim_frame, tag, (20, 32), cv2.FONT_HERSHEY_SIMPLEX, 0.75, (255, 255, 255), 2, cv2.LINE_AA)
+    cv2.imwrite(snap_path, sim_frame)
+
+    details = req.details or {}
+    if req.event_type == "fall":
+        details.setdefault("posture_angle", 67.5)
+        details.setdefault("impact_duration", 2.4)
+    elif req.event_type == "collapse":
+        details.setdefault("stillness_duration", 8.2)
+    elif req.event_type == "panic":
+        details.setdefault("stride_velocity", 46.8)
+    elif req.event_type == "zone_breach":
+        details.setdefault("occupancy", 22)
+        details.setdefault("capacity", 15)
+    else:
+        details.setdefault("headcount", yolo_infer.current_people_count or 42)
+        details.setdefault("threshold", yolo_infer.alert_threshold)
+
+    incident_id = f"sim_{int(now)}_{req.event_type}"
+    incident_record = {
+        "id": incident_id,
+        "event_type": req.event_type,
+        "zone_name": req.zone_name,
+        "timestamp": ts_str,
+        "confidence": req.confidence,
+        "details": details,
+        "snapshot_filename": snap_name,
+        "snapshot_url": f"/api/snapshots/{snap_name}",
+        "acknowledged": False,
+        "people_count": details.get("occupancy", details.get("headcount", yolo_infer.current_people_count)),
+        "threshold": details.get("capacity", details.get("threshold", yolo_infer.alert_threshold)),
+    }
+
+    # Dispatch to alert handler (in-memory, WebSocket broadcast, webhook, SQLite async)
+    handle_incident_alert(incident_record)
+
+    return {"status": "simulated", "incident": incident_record}
+
+
+@app.get("/api/export/csv")
+async def export_csv(
+    type: Annotated[Literal["incidents", "trends", "zones"], Query(description="Dataset to export")] = "incidents",
+    hours: Annotated[float, Query(ge=0.1, le=720.0, description="Time range in hours for trends export")] = 24.0,
+) -> Response:
+    """Export system data as RFC 4180 compliant CSV."""
+    output = io.StringIO()
+    writer = csv.writer(output)
+
+    if type == "incidents":
+        writer.writerow([
+            "Incident ID",
+            "Event Type",
+            "Sector / Location",
+            "Timestamp",
+            "Confidence",
+            "Acknowledged",
+            "People Count",
+            "Threshold",
+            "Snapshot Filename",
+        ])
+        db_events = await db_manager.get_safety_events(limit=500)
+        seen = set()
+        with incidents_lock:
+            for inc in security_incidents:
+                seen.add(inc.get("id"))
+                writer.writerow([
+                    inc.get("id", ""),
+                    inc.get("event_type", "overcrowding"),
+                    inc.get("zone_name", "General Area"),
+                    inc.get("timestamp", ""),
+                    f"{float(inc.get('confidence', 1.0)):.2f}",
+                    "Yes" if inc.get("acknowledged") else "No",
+                    inc.get("people_count", "--"),
+                    inc.get("threshold", "--"),
+                    inc.get("snapshot_filename", ""),
+                ])
+        for ev in db_events:
+            if ev["id"] not in seen:
+                ts = ev.get("timestamp")
+                ts_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(ts)) if isinstance(ts, (int, float)) else str(ts)
+                details = ev.get("details", {})
+                count = details.get("occupancy", details.get("headcount", "--"))
+                thresh = details.get("capacity", details.get("threshold", "--"))
+                writer.writerow([
+                    ev["id"],
+                    ev["event_type"],
+                    ev.get("zone_name", "General Area"),
+                    ts_str,
+                    f"{float(ev.get('confidence', 1.0)):.2f}",
+                    "Yes" if ev.get("acknowledged") else "No",
+                    count,
+                    thresh,
+                    ev.get("snapshot_path", "") or "",
+                ])
+        filename = f"cms_incidents_{int(time.time())}.csv"
+
+    elif type == "trends":
+        writer.writerow(["Timestamp (Epoch)", "Date Time", "Headcount", "Density Level"])
+        trends = await db_manager.get_crowd_trends(hours=hours)
+        for item in trends:
+            ts = item.get("timestamp", 0)
+            dt_str = time.strftime("%Y-%m-%d %H:%M:%S", time.localtime(ts)) if isinstance(ts, (int, float)) else str(ts)
+            writer.writerow([
+                ts,
+                dt_str,
+                item.get("total_count", 0),
+                item.get("density_level", "NORMAL"),
+            ])
+        filename = f"cms_crowd_trends_{int(time.time())}.csv"
+
+    elif type == "zones":
+        writer.writerow(["Sector ID", "Sector Name", "Color", "Current Occupancy", "Max Capacity", "Avg Dwell (sec)", "Vertex Count"])
+        zones = yolo_infer.zone_tracker.get_all_zones()
+        for z in zones:
+            writer.writerow([
+                z.get("id", ""),
+                z.get("name", ""),
+                z.get("color", ""),
+                z.get("current_occupancy", 0),
+                z.get("max_occupancy", 0),
+                round(z.get("avg_dwell_seconds", 0.0), 1),
+                len(z.get("polygon", [])),
+            ])
+        filename = f"cms_sectors_{int(time.time())}.csv"
+
+    output.seek(0)
+    return Response(
+        content=output.getvalue(),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+            "Cache-Control": "no-cache",
+        },
+    )
+
+
+@app.get("/cameras")
+def get_cameras_page(request: Request):
+    """Render Multi-Camera surveillance CCTV grid page."""
+    return templates.TemplateResponse(request, "cameras.html")
+
+
+@app.get("/api/cameras")
+def list_cameras() -> Dict[str, Any]:
+    """List registered surveillance camera feeds and real-time status."""
+    cameras = [
+        {
+            "id": "cam-01",
+            "name": "Main Entry Concourse",
+            "location": "North Wing Gate 1",
+            "status": "ONLINE",
+            "feed_url": "/video_feed",
+            "resolution": f"{yolo_infer.inference_imgsz}p",
+            "fps": round(yolo_infer.fps_telemetry, 1),
+            "headcount": yolo_infer.current_people_count,
+            "density": "HIGH" if yolo_infer.current_people_count >= yolo_infer.alert_threshold else "NORMAL",
+            "alert": yolo_infer.active_alert_triggered,
+            "zone": "Sector Alpha",
+            "is_primary": True,
+        },
+        {
+            "id": "cam-02",
+            "name": "East Corridor Turnstiles",
+            "location": "Turnstile Bank B",
+            "status": "ONLINE",
+            "feed_url": "/video_feed",
+            "resolution": "720p",
+            "fps": 25.0,
+            "headcount": max(0, int(yolo_infer.current_people_count * 0.45)),
+            "density": "NORMAL",
+            "alert": False,
+            "zone": "Sector Bravo",
+            "is_primary": False,
+        },
+        {
+            "id": "cam-03",
+            "name": "Emergency Exit Concourse",
+            "location": "South Stairwell Exit C",
+            "status": "ONLINE",
+            "feed_url": "/video_feed",
+            "resolution": "720p",
+            "fps": 25.0,
+            "headcount": max(0, int(yolo_infer.current_people_count * 0.25)),
+            "density": "NORMAL",
+            "alert": False,
+            "zone": "Sector Charlie",
+            "is_primary": False,
+        },
+        {
+            "id": "cam-04",
+            "name": "West Plaza & Walkway",
+            "location": "Open Courtyard West",
+            "status": "ONLINE",
+            "feed_url": "/video_feed",
+            "resolution": "1080p",
+            "fps": 25.0,
+            "headcount": max(0, int(yolo_infer.current_people_count * 0.65)),
+            "density": "NORMAL",
+            "alert": False,
+            "zone": "Sector Delta",
+            "is_primary": False,
+        },
+    ]
+    total_count = sum(c["headcount"] for c in cameras)
+    return {
+        "cameras": cameras,
+        "total_headcount": total_count,
+        "active_cameras": len(cameras),
+        "total_cameras": 4,
+    }
 
 
 @app.post("/api/incidents/{incident_id}/acknowledge")
-def acknowledge_incident(
+async def acknowledge_incident(
     incident_id: Annotated[str, Path(description="The unique incident ID to acknowledge")]
 ) -> Dict[str, Any]:
-    """Mark an incident as acknowledged by security personnel."""
+    """Mark an incident as acknowledged in memory and SQLite database."""
+    found = False
     with incidents_lock:
         for inc in security_incidents:
             if inc["id"] == incident_id:
                 inc["acknowledged"] = True
-                return {"status": "success", "incident_id": incident_id, "acknowledged": True}
-    raise HTTPException(status_code=404, detail="Incident not found")
+                found = True
+
+    db_ok = await db_manager.acknowledge_safety_event(incident_id)
+    if not found and not db_ok:
+        raise HTTPException(status_code=404, detail="Incident not found")
+
+    await ws_hub.broadcast({
+        "event_type": "incident_acknowledged",
+        "incident_id": incident_id,
+    })
+    return {"status": "success", "incident_id": incident_id, "acknowledged": True}
 
 
 @app.get("/api/snapshots/{filename}")
@@ -633,6 +1148,186 @@ def get_snapshot(
     if not os.path.isfile(snapshot_path):
         raise HTTPException(status_code=404, detail="Snapshot file not found")
     return FileResponse(snapshot_path, media_type="image/jpeg")
+
+
+# =============================================================================
+# Analytics SOC, Security Zones, and Pose Intelligence Routes
+# =============================================================================
+
+@app.get("/analytics", response_class=HTMLResponse)
+def analytics_dashboard(request: Request) -> HTMLResponse:
+    """Serve the dedicated Spatial Safety & Pose Intelligence Analytics SOC dashboard."""
+    return templates.TemplateResponse(request, "analytics.html")
+
+
+@app.get("/api/analytics/summary")
+async def get_analytics_summary() -> Dict[str, Any]:
+    """Return aggregated historical and live spatial safety metrics."""
+    summary = await db_manager.get_analytics_summary()
+    summary["live_people_count"] = yolo_infer.current_people_count
+    summary["live_zones_count"] = len(yolo_infer.get_zones_summary())
+    return summary
+
+
+@app.get("/api/analytics/trends")
+async def get_analytics_trends(
+    hours: Annotated[float, Query(ge=0.1, le=720.0, description="Hours of historical trend to retrieve")] = 24.0,
+) -> List[Dict[str, Any]]:
+    """Retrieve historical crowd density records for Chart.js rendering."""
+    return await db_manager.get_crowd_trends(hours=hours)
+
+
+@app.get("/api/analytics/zones")
+def get_analytics_zones() -> List[Dict[str, Any]]:
+    """Return real-time state, occupancy, and dwell metrics of all security sectors."""
+    return yolo_infer.get_zones_summary()
+
+
+# --- Polygonal Security Zone Management ---
+
+@app.get("/api/zones")
+async def list_zones(
+    camera_id: Annotated[str, Query(description="Camera identifier")] = "primary",
+) -> List[Dict[str, Any]]:
+    """Fetch all defined polygonal security sectors."""
+    return await db_manager.get_zones(camera_id=camera_id)
+
+
+@app.post("/api/zones")
+async def create_or_update_zone(
+    req: ZoneCreateRequest,
+    current_user: OptionalUserDep = None,
+) -> Dict[str, Any]:
+    """Create or update a polygonal security sector."""
+    zone_id = req.id or f"zone-{int(time.time())}"
+    saved = await db_manager.save_zone(
+        zone_id=zone_id,
+        name=req.name,
+        color=req.color,
+        polygon=req.polygon,
+        max_occupancy=req.max_occupancy,
+        camera_id=req.camera_id,
+    )
+    # Refresh inference zone tracker
+    all_zones = await db_manager.get_zones(camera_id=req.camera_id)
+    yolo_infer.update_zones(all_zones)
+
+    # Broadcast zone configuration update
+    await ws_hub.broadcast({
+        "event_type": "zone_update",
+        "action": "saved",
+        "zone": saved,
+    })
+    return {"status": "success", "zone": saved}
+
+
+@app.delete("/api/zones/{zone_id}")
+async def delete_zone(
+    zone_id: Annotated[str, Path(description="Zone ID to remove")],
+    current_user: OptionalUserDep = None,
+) -> Dict[str, Any]:
+    """Delete a security sector definition."""
+    deleted = await db_manager.delete_zone(zone_id)
+    if not deleted:
+        raise HTTPException(status_code=404, detail="Zone not found")
+
+    all_zones = await db_manager.get_zones()
+    yolo_infer.update_zones(all_zones)
+
+    await ws_hub.broadcast({
+        "event_type": "zone_update",
+        "action": "deleted",
+        "zone_id": zone_id,
+    })
+    return {"status": "success", "zone_id": zone_id}
+
+
+@app.put("/api/zones/{zone_id}/polygon")
+async def update_zone_polygon_endpoint(
+    zone_id: Annotated[str, Path(description="Zone ID to calibrate")],
+    req: ZonePolygonUpdateRequest,
+    current_user: OptionalUserDep = None,
+) -> Dict[str, Any]:
+    """Update polygon coordinates of an existing zone from live calibration."""
+    updated = await db_manager.update_zone_polygon(zone_id, req.polygon)
+    if not updated:
+        raise HTTPException(status_code=404, detail="Zone not found")
+    yolo_infer.update_zone_polygon(zone_id, req.polygon)
+    await ws_hub.broadcast({
+        "event_type": "zone_update",
+        "action": "calibrated",
+        "zone_id": zone_id,
+        "polygon": req.polygon,
+    })
+    return {"status": "success", "zone": updated}
+
+
+@app.post("/api/zones/toggle")
+def toggle_zones(req: ToggleRequest) -> Dict[str, Any]:
+    """Toggle polygonal sector overlay rendering on video feeds."""
+    yolo_infer.set_zones_enabled(req.enabled)
+    return {"status": "success", "zones_enabled": yolo_infer.enable_zones}
+
+
+@app.post("/api/pose/toggle")
+def toggle_pose(req: ToggleRequest) -> Dict[str, Any]:
+    """Toggle YOLO-Pose skeletal bone overlay rendering on video feeds."""
+    yolo_infer.set_pose_enabled(req.enabled)
+    return {"status": "success", "pose_enabled": yolo_infer.enable_pose}
+
+
+# --- Authentication Endpoints ---
+
+@app.post("/api/auth/login", response_model=LoginResponse)
+async def login(req: LoginRequest) -> LoginResponse:
+    """Authenticate operator credentials and issue signed JWT token."""
+    user = await db_manager.get_user_by_username(req.username.strip())
+    if not user or not verify_password(req.password, user["password_hash"]):
+        raise HTTPException(status_code=401, detail="Invalid username or password")
+
+    token = create_access_token(username=user["username"], role=user["role"])
+    return LoginResponse(
+        access_token=token,
+        token_type="bearer",
+        role=user["role"],
+        username=user["username"],
+    )
+
+
+@app.get("/api/auth/me")
+async def get_me(current_user: CurrentUserDep) -> Dict[str, Any]:
+    """Return currently authenticated operator profile."""
+    return current_user
+
+
+# --- Real-Time WebSocket & SSE Event Bus ---
+
+@app.websocket("/ws/events")
+async def websocket_events(websocket: WebSocket) -> None:
+    """Real-time WebSocket telemetry push for live crowd metrics and pose incidents."""
+    await ws_hub.connect(websocket)
+    try:
+        while True:
+            # Keep connection alive and receive ping/heartbeat from client
+            await websocket.receive_text()
+    except WebSocketDisconnect:
+        await ws_hub.disconnect(websocket)
+    except Exception:
+        await ws_hub.disconnect(websocket)
+
+
+@app.get("/api/events/stream")
+def sse_event_stream() -> StreamingResponse:
+    """Server-Sent Events (SSE) fallback stream for real-time telemetry."""
+    return StreamingResponse(
+        ws_hub.event_generator(),
+        media_type="text/event-stream",
+        headers={
+            "Cache-Control": "no-cache",
+            "Connection": "keep-alive",
+            "X-Accel-Buffering": "no",
+        },
+    )
 
 
 

@@ -144,6 +144,67 @@
       color: var(--neo-black) !important;
       border-color: var(--neo-black) !important;
     }
+    .toggle-btn.btn-active-yellow {
+      background: var(--neo-yellow) !important;
+      color: var(--neo-black) !important;
+      border-color: var(--neo-black) !important;
+    }
+    .toggle-btn.btn-active-green {
+      background: var(--neo-green) !important;
+      color: var(--neo-black) !important;
+      border-color: var(--neo-black) !important;
+    }
+    .btn-neo-green {
+      background: var(--neo-green) !important;
+    }
+    .btn-neo-cyan {
+      background: var(--neo-cyan) !important;
+    }
+
+    /* Sector Calibration Canvas & Toolbar */
+    .calibration-canvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 50;
+      cursor: crosshair;
+    }
+    .calibration-toolbar {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      right: 12px;
+      background: var(--neo-surface);
+      border: 2px solid var(--neo-black);
+      box-shadow: 4px 4px 0px var(--neo-black);
+      padding: 0.6rem 1rem;
+      border-radius: 8px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 60;
+      gap: 0.5rem;
+    }
+
+    /* Neo-Brutalism Toast Notification */
+    .neo-toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--neo-yellow);
+      color: var(--neo-black);
+      border: 2px solid var(--neo-black);
+      box-shadow: 4px 4px 0px var(--neo-black);
+      padding: 0.75rem 1.25rem;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      font-size: 0.88rem;
+      z-index: 100000;
+      border-radius: 8px;
+      transition: opacity 0.2s ease, transform 0.2s ease;
+    }
 
     /* Kit Langton Rolling Number Reels */
     .rolling-number-wrap {
@@ -730,9 +791,17 @@
           <i class="bi bi-camera-video"></i>
           <span>Live Surveillance</span>
         </a>
+        <a href="/cameras" class="nav-btn">
+          <i class="bi bi-grid-3x3"></i>
+          <span>Multi-Cam Grid</span>
+        </a>
         <a href="/video_studio" class="nav-btn">
           <i class="bi bi-film"></i>
           <span>Video Studio</span>
+        </a>
+        <a href="/analytics" class="nav-btn">
+          <i class="bi bi-graph-up-arrow"></i>
+          <span>Analytics SOC</span>
         </a>
         <a href="/" class="nav-btn">
           <i class="bi bi-grid-1x2"></i>
@@ -855,7 +924,7 @@
         <div class="d-flex align-items-center gap-2">
           <span class="pulse-dot-green"></span>
           <span class="font-mono text-black fw-bold small">FEED // CAM-01: PEDESTRIAN CONCOURSE</span>
-          <span class="badge border-2 border-black font-mono" style="background: var(--neo-surface); color: #000; font-size: 0.72rem; box-shadow: 1px 1px 0px #000;">1280x720 · 25 FPS</span>
+          <span class="badge border-2 border-black font-mono" id="hudBadge" style="background: var(--neo-surface); color: #000; font-size: 0.72rem; box-shadow: 1px 1px 0px #000;">1280x720 · 25 FPS · 640px INF</span>
         </div>
         <div class="d-flex align-items-center gap-3 font-mono small text-black fw-bold">
           <span class="d-none d-md-inline"><i class="bi bi-bounding-box me-1"></i>ByteTrack Persist</span>
@@ -864,6 +933,22 @@
       </div>
 
       <div class="stream-viewport" id="mainFeed">
+        <!-- Interactive Sector Calibration Canvas Overlay -->
+        <div id="calibrationBar" class="calibration-toolbar" style="display: none;">
+          <div class="d-flex align-items-center gap-2">
+            <span class="badge border-2 border-black font-mono fw-bold" style="background: var(--neo-yellow); color: #000; box-shadow: 2px 2px 0px #000;">CALIBRATION ACTIVE</span>
+            <span class="small font-mono fw-bold text-black d-none d-md-inline">Drag circular neon handles on zone corners to calibrate boundaries.</span>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <button class="btn-neo btn-neo-green py-1 px-3" onclick="saveCalibration()" style="font-size: 0.82rem; background: var(--neo-green);">
+              <i class="bi bi-check2-circle me-1"></i>Save Positions
+            </button>
+            <button class="btn-neo py-1 px-3" onclick="exitCalibration()" style="font-size: 0.82rem; background: #fff;">
+              <i class="bi bi-x-circle me-1"></i>Exit
+            </button>
+          </div>
+        </div>
+        <canvas id="calibrationCanvas" class="calibration-canvas" style="display: none;"></canvas>
         <img src="{{ url_for('video_feed') }}" alt="Live Surveillance Feed" id="mainImage" />
       </div>
     </div>
@@ -873,11 +958,23 @@
       <!-- Cluster 1: Vision Overlays -->
       <div class="command-cluster">
         <button class="toggle-btn" id="heatmapBtn" onclick="toggleHeatmap()">
-          <i class="bi bi-thermometer-half"></i><span id="heatmapBtnText">Enable Heat Map</span>
+          <i class="bi bi-thermometer-half"></i><span id="heatmapBtnText">Heat Map</span>
         </button>
 
-        <button class="toggle-btn" id="resBtn" onclick="toggleResolution()">
-          <i class="bi bi-aspect-ratio"></i><span id="resText">640px</span>
+        <button class="toggle-btn" id="sectorsToggleBtn" onclick="toggleSectors()" title="Toggle visual polygon security sector boundaries">
+          <i class="bi bi-bounding-box-circles"></i><span id="sectorsBtnText">Sectors: OFF</span>
+        </button>
+
+        <button class="toggle-btn" id="calibrateBtn" onclick="startCalibration()" title="Drag sector polygon corners directly on video stream">
+          <i class="bi bi-pencil-square"></i><span>Calibrate</span>
+        </button>
+
+        <button class="toggle-btn" id="privacyBtn" onclick="togglePrivacyMode()" title="Toggle real-time face blurring for DPDPA 2023 compliance">
+          <i class="bi bi-shield-check"></i><span id="privacyBtnText">Privacy: OFF</span>
+        </button>
+
+        <button class="toggle-btn" id="resBtn" onclick="toggleResolution()" title="Toggle YOLO26 crowd inference image resolution">
+          <i class="bi bi-aspect-ratio"></i><span id="resText">Inference: 640px (Turbo)</span>
         </button>
       </div>
 
@@ -894,14 +991,30 @@
         </button>
       </div>
 
-      <!-- Cluster 3: Audit & Navigation -->
+      <!-- Cluster 3: Hardware, Audit & Navigation -->
       <div class="command-cluster">
+        <button class="toggle-btn" onclick="openSimulateModal()" title="Simulate real-time safety incident drill">
+          <i class="bi bi-broadcast"></i><span>Simulate Drill</span>
+        </button>
+
+        <button class="toggle-btn" id="hardwareBtn" onclick="openHardwareModal()" title="Hardware acceleration, GPU profiles, and TensorRT">
+          <i class="bi bi-cpu"></i><span id="hardwareBtnText">Acceleration</span>
+        </button>
+
         <button class="toggle-btn" onclick="openIncidentDrawer()">
           <i class="bi bi-shield-exclamation"></i>Incidents <span id="incidentBadge" class="badge border-2 border-black ms-1" style="background: var(--neo-pink); color: #000; box-shadow: 1px 1px 0px #000;">0</span>
         </button>
 
         <button class="toggle-btn" onclick="openWebhookModal()">
           <i class="bi bi-broadcast"></i>Webhook
+        </button>
+
+        <button class="toggle-btn" onclick="window.location.href='/cameras'">
+          <i class="bi bi-grid-3x3"></i>Multi-Cam
+        </button>
+
+        <button class="toggle-btn" onclick="window.location.href='/analytics'">
+          <i class="bi bi-graph-up"></i>Analytics
         </button>
 
         <button class="toggle-btn" onclick="window.location.href='/'">
@@ -973,6 +1086,153 @@
       </div>
     </div>
   </div>
+
+  <!-- Hardware & Acceleration Modal -->
+  <div id="hardwareModal" class="modal">
+    <div class="modal-content" style="max-width: 680px;">
+      <div class="modal-header">
+        <h5 class="modal-title font-mono fw-bold"><i class="bi bi-cpu me-2"></i>HARDWARE ACCELERATION & MODEL PROFILES</h5>
+        <button class="close" onclick="closeHardwareModal()">&times;</button>
+      </div>
+      <div class="modal-body p-0 py-3">
+        <!-- Live Hardware Telemetry Banner -->
+        <div class="p-3 mb-3 border-2 border-black rounded" style="background: var(--neo-surface); box-shadow: 3px 3px 0px #000;">
+          <div class="d-flex justify-content-between align-items-center mb-2">
+            <span class="small font-mono fw-bold text-uppercase" id="hwGpuName">NVIDIA GEFORCE RTX 4050</span>
+            <span class="badge border-2 border-black font-mono" id="hwProfileBadge" style="background: var(--neo-lime); color: #000; box-shadow: 1px 1px 0px #000;">PROFILE: ECO</span>
+          </div>
+          <div class="row g-2 text-center font-mono small">
+            <div class="col-3 border-end border-dark">
+              <div class="text-muted" style="font-size: 0.72rem;">DET LATENCY</div>
+              <div class="fw-bold" id="hwDetLatency">-- ms</div>
+            </div>
+            <div class="col-3 border-end border-dark">
+              <div class="text-muted" style="font-size: 0.72rem;">POSE LATENCY</div>
+              <div class="fw-bold" id="hwPoseLatency">-- ms</div>
+            </div>
+            <div class="col-3 border-end border-dark">
+              <div class="text-muted" style="font-size: 0.72rem;">STREAM FPS</div>
+              <div class="fw-bold" id="hwFps">-- FPS</div>
+            </div>
+            <div class="col-3">
+              <div class="text-muted" style="font-size: 0.72rem;">VRAM ALLOC</div>
+              <div class="fw-bold" id="hwVram">-- MB</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Tiered Hardware Presets -->
+        <div class="mb-3">
+          <label class="form-label small fw-bold text-black font-mono">1-CLICK HARDWARE PRESETS</label>
+          <div class="d-flex gap-2 flex-wrap">
+            <button class="btn-neo py-2 px-3 flex-fill" id="presetEcoBtn" onclick="applyHardwareProfile('eco')">
+              <div class="fw-bold">Eco / Laptop GPU</div>
+              <div class="text-muted" style="font-size: 0.7rem;">RTX 3050/4050 · 640px · Stride 2</div>
+            </button>
+            <button class="btn-neo py-2 px-3 flex-fill" id="presetBalancedBtn" onclick="applyHardwareProfile('balanced')">
+              <div class="fw-bold">Balanced</div>
+              <div class="text-muted" style="font-size: 0.7rem;">RTX 4060/4070 · 640px · Stride 1</div>
+            </button>
+            <button class="btn-neo py-2 px-3 flex-fill" id="presetUltraBtn" onclick="applyHardwareProfile('ultra')">
+              <div class="fw-bold">Ultra High-End GPU</div>
+              <div class="text-muted" style="font-size: 0.7rem;">RTX 4080/4090/A100 · 1024px</div>
+            </button>
+          </div>
+        </div>
+
+        <!-- Granular Tuning Overrides -->
+        <div class="row g-2 mb-3">
+          <div class="col-md-6">
+            <label class="form-label small fw-bold text-black font-mono">YOLO26 POSE MODEL VARIANT</label>
+            <select class="form-select border-2 border-black font-mono small" id="hwPoseModelSelect" onchange="onPoseModelChange(this.value)">
+              <option value="yolo26n-pose.pt">YOLO26n-Pose (Nano · 7.5MB · Fastest)</option>
+              <option value="yolo26s-pose.pt">YOLO26s-Pose (Small · 23MB · Balanced)</option>
+              <option value="yolo26m-pose.pt">YOLO26m-Pose (Medium · Dense Crowds)</option>
+            </select>
+          </div>
+          <div class="col-md-6">
+            <label class="form-label small fw-bold text-black font-mono">POSE STRIDE (FRAME SKIPPING)</label>
+            <select class="form-select border-2 border-black font-mono small" id="hwPoseStrideSelect" onchange="onPoseStrideChange(this.value)">
+              <option value="1">1 (Every frame · Max fidelity)</option>
+              <option value="2">2 (Every 2nd frame · 50% pose speedup)</option>
+              <option value="3">3 (Every 3rd frame · 66% pose speedup)</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="d-flex align-items-center justify-content-between p-2 mb-3 border-2 border-black rounded" style="background: var(--neo-surface);">
+          <div>
+            <div class="fw-bold font-mono small">FP16 Half-Precision Tensor Cores</div>
+            <div class="text-muted font-mono" style="font-size: 0.72rem;">Runs model math in 16-bit float on RTX Tensor Cores for ~2x acceleration.</div>
+          </div>
+          <div class="form-check form-switch m-0">
+            <input class="form-check-input border-2 border-black" type="checkbox" id="hwFp16Switch" onchange="onFp16Toggle(this.checked)" style="width: 2.5em; height: 1.25em;">
+          </div>
+        </div>
+
+        <!-- TensorRT Engine Option -->
+        <div class="p-3 border-2 border-black rounded mb-3" style="background: rgba(166, 250, 255, 0.25);">
+          <div class="d-flex justify-content-between align-items-center">
+            <div>
+              <div class="fw-bold font-mono small">NVIDIA TensorRT Compiler</div>
+              <div class="text-muted font-mono" style="font-size: 0.72rem;">Compiles YOLO26 into high-throughput hardware engine (.engine).</div>
+            </div>
+            <button class="btn-neo btn-neo-cyan py-1 px-3 font-mono small" onclick="compileTensorRT()" id="tensorRtBtn">
+              Compile TensorRT
+            </button>
+          </div>
+        </div>
+
+        <div class="d-flex justify-content-end gap-2">
+          <button class="btn-neo btn-neo-white py-1 px-3" onclick="closeHardwareModal()">Close</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Incident Simulation Modal -->
+  <div class="modal-backdrop" id="simulateModalBackdrop" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.6); z-index: 10500;">
+    <div style="max-width: 520px; margin: 5% auto; background: var(--neo-bg); border: 4px solid var(--neo-black); border-radius: 12px; box-shadow: 10px 10px 0px var(--neo-black); overflow: hidden;">
+      <div style="background: var(--neo-yellow); border-bottom: 3px solid var(--neo-black); padding: 1rem 1.25rem; display: flex; justify-content: space-between; align-items: center;">
+        <h5 class="mb-0 fw-bold font-display">Simulate Safety Incident Drill</h5>
+        <button type="button" class="close" onclick="closeSimulateModal()">&times;</button>
+      </div>
+      <div style="padding: 1.5rem;">
+        <p class="small text-muted mb-3 font-mono">
+          Trigger a real-time drill incident. The event will dispatch live alerts, sound the alarm siren, capture an annotated snapshot, broadcast to all dashboards, and log to the audit database.
+        </p>
+        <form id="simulateLiveForm" onsubmit="handleLiveSimulateSubmit(event)">
+          <div class="mb-3">
+            <label class="form-label font-mono fw-bold small text-uppercase">Incident Type</label>
+            <select id="simLiveType" class="form-select border-2 border-black font-mono">
+              <option value="fall">Person Fall (Horizontal Spine Angle > 52 deg)</option>
+              <option value="collapse">Unresponsive / Collapsed Person (> 6s Stillness)</option>
+              <option value="panic">Panic Strides / Rapid Dispersal</option>
+              <option value="zone_breach">Sector Capacity Breach</option>
+              <option value="overcrowding">Sustained Overcrowding</option>
+            </select>
+          </div>
+          <div class="mb-3">
+            <label class="form-label font-mono fw-bold small text-uppercase">Target Security Sector</label>
+            <input type="text" id="simLiveZone" class="form-control border-2 border-black font-mono" value="Primary CCTV Sector" required />
+          </div>
+          <div class="mb-3">
+            <label class="form-label font-mono fw-bold small text-uppercase">Detection Confidence</label>
+            <input type="number" id="simLiveConfidence" class="form-control border-2 border-black font-mono" min="0.5" max="1.0" step="0.01" value="0.96" required />
+          </div>
+          <div class="d-flex justify-content-end gap-2 pt-2">
+            <button type="button" class="btn-neo btn-neo-white py-1 px-3" onclick="closeSimulateModal()">Cancel</button>
+            <button type="submit" class="btn-neo btn-neo-yellow py-1 px-3" style="background: var(--neo-pink);">
+              <i class="bi bi-broadcast"></i> Execute Drill
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Neo Toast Container -->
+  <div id="neoToast" class="neo-toast" style="display: none;"></div>
 
   <!-- Incident Drawer & Backdrop -->
   <div id="drawerBackdrop" class="drawer-backdrop" onclick="closeIncidentDrawer()"></div>
@@ -1245,11 +1505,43 @@
       }
     }
 
-    // Inference Resolution Toggle
+    // Neo-Brutalism Toast Notifications
+    function showToast(msg, bg = 'var(--neo-yellow)') {
+      const toast = document.getElementById('neoToast');
+      if (!toast) return;
+      toast.textContent = msg;
+      toast.style.background = bg;
+      toast.style.display = 'block';
+      toast.style.opacity = '1';
+      toast.style.transform = 'translateY(0)';
+      clearTimeout(window._toastTimer);
+      window._toastTimer = setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transform = 'translateY(10px)';
+        setTimeout(() => { toast.style.display = 'none'; }, 220);
+      }, 3000);
+    }
+
+    // Inference Resolution Precision & Turbo Toggle
     let currentResolution = 640;
     async function toggleResolution() {
       currentResolution = currentResolution === 640 ? 1024 : 640;
-      document.getElementById('resText').textContent = currentResolution + 'px';
+      const resBtn = document.getElementById('resBtn');
+      const resText = document.getElementById('resText');
+      const hudBadge = document.getElementById('hudBadge');
+
+      if (currentResolution === 1024) {
+        resText.textContent = 'Inference: 1024px (Precision)';
+        resBtn.classList.add('btn-active-cyan');
+        if (hudBadge) hudBadge.textContent = '1280x720 · 25 FPS · 1024px PRECISION';
+        showToast('Precision Mode Active (1024px): Enhanced far-field crowd detection', 'var(--neo-cyan)');
+      } else {
+        resText.textContent = 'Inference: 640px (Turbo)';
+        resBtn.classList.remove('btn-active-cyan');
+        if (hudBadge) hudBadge.textContent = '1280x720 · 25 FPS · 640px TURBO';
+        showToast('Turbo Mode Active (640px): Maximum frame rate throughput', 'var(--neo-yellow)');
+      }
+
       try {
         await fetch('/api/settings/imgsz', {
           method: 'POST',
@@ -1258,6 +1550,394 @@
         });
       } catch (err) {
         console.error('Failed to update resolution:', err);
+      }
+    }
+
+    // Sector Overlay Toggle
+    let sectorsEnabled = false;
+    async function toggleSectors() {
+      sectorsEnabled = !sectorsEnabled;
+      const btn = document.getElementById('sectorsToggleBtn');
+      const txt = document.getElementById('sectorsBtnText');
+      if (sectorsEnabled) {
+        btn.classList.add('btn-active-yellow');
+        txt.textContent = 'Sectors: ON';
+        showToast('Sector boundaries displayed on video stream', 'var(--neo-yellow)');
+      } else {
+        btn.classList.remove('btn-active-yellow');
+        txt.textContent = 'Sectors: OFF';
+        showToast('Sector boundaries hidden from video stream', 'var(--neo-surface)');
+      }
+      try {
+        await fetch('/api/zones/toggle', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled: sectorsEnabled })
+        });
+      } catch (err) {
+        console.error('Failed to toggle zones overlay:', err);
+      }
+    }
+
+    // Interactive On-Stream Sector Calibration Engine
+    let calibrationActive = false;
+    let calibrationZones = [];
+    let dragTarget = null; // { zoneIdx, vertexIdx }
+    const calCanvas = document.getElementById('calibrationCanvas');
+    const calBar = document.getElementById('calibrationBar');
+    const mainImg = document.getElementById('mainImage');
+
+    function hexToRgba(hex, alpha = 0.3) {
+      const clean = (hex || '#FFE500').replace('#', '');
+      const r = parseInt(clean.substring(0, 2), 16) || 255;
+      const g = parseInt(clean.substring(2, 4), 16) || 229;
+      const b = parseInt(clean.substring(4, 6), 16) || 0;
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+
+    async function startCalibration() {
+      try {
+        const res = await fetch('/api/zones');
+        if (!res.ok) throw new Error('Failed to load zones');
+        const zones = await res.json();
+        if (!zones || zones.length === 0) {
+          showToast('No sectors configured yet. Create a sector in Analytics first.', 'var(--neo-pink)');
+          return;
+        }
+
+        calCanvas.width = mainImg.clientWidth || 1280;
+        calCanvas.height = mainImg.clientHeight || 720;
+
+        // Map zones to canvas pixel space
+        calibrationZones = zones.map(z => {
+          const rawPts = z.polygon || [];
+          const canvasPts = rawPts.map(pt => {
+            const px = pt[0];
+            const py = pt[1];
+            // Normalize or scale from 1280x720 space
+            const x = (px <= 1.0 ? px * calCanvas.width : (px / 1280) * calCanvas.width);
+            const y = (py <= 1.0 ? py * calCanvas.height : (py / 720) * calCanvas.height);
+            return [x, y];
+          });
+          return {
+            id: z.id,
+            name: z.name,
+            color: z.color || '#FFE500',
+            points: canvasPts
+          };
+        });
+
+        calibrationActive = true;
+        calCanvas.style.display = 'block';
+        calBar.style.display = 'flex';
+        renderCalibration();
+        showToast('Calibration Mode: Drag corner handles to position sectors', 'var(--neo-cyan)');
+      } catch (err) {
+        console.error('Failed to start calibration:', err);
+        showToast('Error initializing calibration', 'var(--neo-red)');
+      }
+    }
+
+    function renderCalibration() {
+      if (!calibrationActive) return;
+      const ctx = calCanvas.getContext('2d');
+      ctx.clearRect(0, 0, calCanvas.width, calCanvas.height);
+
+      calibrationZones.forEach((z, zIdx) => {
+        if (!z.points || z.points.length < 3) return;
+
+        // Draw filled polygon
+        ctx.beginPath();
+        ctx.moveTo(z.points[0][0], z.points[0][1]);
+        for (let i = 1; i < z.points.length; i++) {
+          ctx.lineTo(z.points[i][0], z.points[i][1]);
+        }
+        ctx.closePath();
+
+        ctx.fillStyle = hexToRgba(z.color, 0.28);
+        ctx.fill();
+
+        ctx.lineWidth = 4;
+        ctx.strokeStyle = '#000000';
+        ctx.stroke();
+
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = z.color;
+        ctx.stroke();
+
+        // Draw center label
+        let cx = 0, cy = 0;
+        z.points.forEach(p => { cx += p[0]; cy += p[1]; });
+        cx /= z.points.length;
+        cy /= z.points.length;
+
+        ctx.font = 'bold 12px "Space Grotesk", sans-serif';
+        const txt = z.name.toUpperCase();
+        const textWidth = ctx.measureText(txt).width;
+
+        ctx.fillStyle = '#000000';
+        ctx.fillRect(cx - textWidth / 2 - 6, cy - 14, textWidth + 12, 20);
+        ctx.fillStyle = z.color;
+        ctx.fillText(txt, cx - textWidth / 2, cy);
+
+        // Draw corner handles
+        z.points.forEach((p, vIdx) => {
+          const isSelected = dragTarget && dragTarget.zoneIdx === zIdx && dragTarget.vertexIdx === vIdx;
+          const radius = isSelected ? 10 : 8;
+
+          ctx.beginPath();
+          ctx.arc(p[0], p[1], radius + 2, 0, Math.PI * 2);
+          ctx.fillStyle = '#000000';
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.arc(p[0], p[1], radius, 0, Math.PI * 2);
+          ctx.fillStyle = isSelected ? '#FFE500' : '#FFFFFF';
+          ctx.fill();
+
+          ctx.beginPath();
+          ctx.arc(p[0], p[1], radius - 4, 0, Math.PI * 2);
+          ctx.fillStyle = isSelected ? '#000000' : (z.color || '#A6FAFF');
+          ctx.fill();
+        });
+      });
+    }
+
+    function getCanvasCoords(evt) {
+      const rect = calCanvas.getBoundingClientRect();
+      const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
+      const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
+      const scaleX = calCanvas.width / rect.width;
+      const scaleY = calCanvas.height / rect.height;
+      return {
+        x: (clientX - rect.left) * scaleX,
+        y: (clientY - rect.top) * scaleY
+      };
+    }
+
+    calCanvas.addEventListener('mousedown', (e) => {
+      const pos = getCanvasCoords(e);
+      dragTarget = null;
+      for (let zIdx = 0; zIdx < calibrationZones.length; zIdx++) {
+        const pts = calibrationZones[zIdx].points;
+        for (let vIdx = 0; vIdx < pts.length; vIdx++) {
+          const dist = Math.hypot(pts[vIdx][0] - pos.x, pts[vIdx][1] - pos.y);
+          if (dist <= 16) {
+            dragTarget = { zoneIdx: zIdx, vertexIdx: vIdx };
+            renderCalibration();
+            return;
+          }
+        }
+      }
+    });
+
+    calCanvas.addEventListener('mousemove', (e) => {
+      if (!dragTarget) {
+        const pos = getCanvasCoords(e);
+        let hovering = false;
+        for (let zIdx = 0; zIdx < calibrationZones.length; zIdx++) {
+          const pts = calibrationZones[zIdx].points;
+          for (let vIdx = 0; vIdx < pts.length; vIdx++) {
+            if (Math.hypot(pts[vIdx][0] - pos.x, pts[vIdx][1] - pos.y) <= 16) {
+              hovering = true;
+              break;
+            }
+          }
+        }
+        calCanvas.style.cursor = hovering ? 'grab' : 'crosshair';
+        return;
+      }
+
+      calCanvas.style.cursor = 'grabbing';
+      const pos = getCanvasCoords(e);
+      const targetZone = calibrationZones[dragTarget.zoneIdx];
+      targetZone.points[dragTarget.vertexIdx] = [
+        Math.max(4, Math.min(calCanvas.width - 4, Math.round(pos.x))),
+        Math.max(4, Math.min(calCanvas.height - 4, Math.round(pos.y)))
+      ];
+      renderCalibration();
+    });
+
+    window.addEventListener('mouseup', () => {
+      if (dragTarget) {
+        dragTarget = null;
+        calCanvas.style.cursor = 'grab';
+        renderCalibration();
+      }
+    });
+
+    async function saveCalibration() {
+      try {
+        let savedCount = 0;
+        for (const z of calibrationZones) {
+          // Convert back to native 1280x720 video resolution
+          const nativePolygon = z.points.map(p => [
+            Math.round((p[0] / calCanvas.width) * 1280),
+            Math.round((p[1] / calCanvas.height) * 720)
+          ]);
+
+          const res = await fetch(`/api/zones/${z.id}/polygon`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ polygon: nativePolygon })
+          });
+          if (res.ok) savedCount++;
+        }
+
+        calCanvas.style.display = 'none';
+        calBar.style.display = 'none';
+        calibrationActive = false;
+
+        // Auto-enable sectors if not active so user sees newly calibrated zones
+        if (!sectorsEnabled) {
+          toggleSectors();
+        }
+
+        showToast(`Saved ${savedCount} calibrated sectors successfully!`, 'var(--neo-green)');
+      } catch (err) {
+        console.error('Failed to save calibration:', err);
+        showToast('Error saving calibrated positions', 'var(--neo-red)');
+      }
+    }
+
+    function exitCalibration() {
+      calCanvas.style.display = 'none';
+      calBar.style.display = 'none';
+      calibrationActive = false;
+      showToast('Calibration cancelled', 'var(--neo-surface)');
+    }
+
+    // Hardware & Model Performance Handlers
+    const hardwareModal = document.getElementById('hardwareModal');
+
+    async function openHardwareModal() {
+      hardwareModal.style.display = 'block';
+      await refreshHardwareStats();
+    }
+
+    function closeHardwareModal() {
+      hardwareModal.style.display = 'none';
+    }
+
+    async function refreshHardwareStats() {
+      try {
+        const res = await fetch('/api/settings/hardware');
+        if (!res.ok) return;
+        const hw = await res.json();
+
+        document.getElementById('hwGpuName').textContent = hw.gpu_name || 'CPU Host';
+        document.getElementById('hwProfileBadge').textContent = `PROFILE: ${(hw.profile || 'ECO').toUpperCase()}`;
+        document.getElementById('hwDetLatency').textContent = `${hw.det_latency_ms || 0} ms`;
+        document.getElementById('hwPoseLatency').textContent = `${hw.pose_latency_ms || 0} ms`;
+        document.getElementById('hwFps').textContent = `${hw.fps || 25} FPS`;
+        document.getElementById('hwVram').textContent = `${hw.vram_used_mb || 0} / ${hw.vram_total_mb || 0} MB`;
+
+        document.getElementById('hwPoseModelSelect').value = hw.pose_model || 'yolo26n-pose.pt';
+        document.getElementById('hwPoseStrideSelect').value = String(hw.pose_stride || 2);
+        document.getElementById('hwFp16Switch').checked = Boolean(hw.fp16_enabled);
+
+        // Highlight preset buttons
+        const p = hw.profile || 'eco';
+        ['eco', 'balanced', 'ultra'].forEach(preset => {
+          const btn = document.getElementById(`preset${preset.charAt(0).toUpperCase() + preset.slice(1)}Btn`);
+          if (btn) {
+            if (p === preset) {
+              btn.classList.add('btn-active-cyan');
+            } else {
+              btn.classList.remove('btn-active-cyan');
+            }
+          }
+        });
+      } catch (err) {
+        console.error('Failed to fetch hardware telemetry:', err);
+      }
+    }
+
+    async function applyHardwareProfile(profileName) {
+      try {
+        const res = await fetch('/api/settings/hardware_profile', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ profile: profileName })
+        });
+        if (res.ok) {
+          const hw = await res.json();
+          await refreshHardwareStats();
+          currentResolution = hw.inference_imgsz || 640;
+          document.getElementById('resText').textContent = currentResolution === 1024 ? 'Inference: 1024px (Precision)' : 'Inference: 640px (Turbo)';
+          showToast(`Applied ${profileName.toUpperCase()} hardware performance profile`, 'var(--neo-green)');
+        }
+      } catch (err) {
+        showToast('Failed to apply hardware profile', 'var(--neo-red)');
+      }
+    }
+
+    async function onPoseModelChange(modelName) {
+      try {
+        const res = await fetch('/api/settings/pose_model', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ model_name: modelName })
+        });
+        if (res.ok) {
+          showToast(`Hot-swapped pose model to ${modelName}`, 'var(--neo-cyan)');
+          refreshHardwareStats();
+        }
+      } catch (err) {
+        showToast('Failed to load pose model', 'var(--neo-red)');
+      }
+    }
+
+    async function onPoseStrideChange(strideVal) {
+      try {
+        const res = await fetch('/api/settings/pose_stride', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ stride: parseInt(strideVal, 10) })
+        });
+        if (res.ok) {
+          showToast(`Pose frame stride updated to ${strideVal}`, 'var(--neo-yellow)');
+          refreshHardwareStats();
+        }
+      } catch (err) {
+        showToast('Failed to update stride', 'var(--neo-red)');
+      }
+    }
+
+    async function onFp16Toggle(checked) {
+      try {
+        const res = await fetch('/api/settings/fp16', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled: checked })
+        });
+        if (res.ok) {
+          showToast(`CUDA FP16 Tensor Cores ${checked ? 'Enabled' : 'Disabled'}`, 'var(--neo-cyan)');
+          refreshHardwareStats();
+        }
+      } catch (err) {
+        showToast('Failed to toggle FP16', 'var(--neo-red)');
+      }
+    }
+
+    async function compileTensorRT() {
+      const btn = document.getElementById('tensorRtBtn');
+      btn.disabled = true;
+      btn.textContent = 'Compiling...';
+      try {
+        const res = await fetch('/api/settings/export_tensorrt', { method: 'POST' });
+        if (res.ok) {
+          showToast('TensorRT compilation launched in background thread', 'var(--neo-green)');
+        } else {
+          showToast('TensorRT compilation request failed', 'var(--neo-red)');
+        }
+      } catch (err) {
+        showToast('Error initiating TensorRT export', 'var(--neo-red)');
+      } finally {
+        setTimeout(() => {
+          btn.disabled = false;
+          btn.textContent = 'Compile TensorRT';
+        }, 5000);
       }
     }
 
@@ -1323,20 +2003,43 @@
         container.innerHTML = incidents.map(inc => {
           const isAck = Boolean(inc.acknowledged);
           const cardClass = isAck ? 'incident-card ack' : 'incident-card unack';
+          const type = (inc.event_type || 'overcrowding').toUpperCase();
+          let typeColor = 'var(--neo-red)';
+          if (type === 'FALL') typeColor = 'var(--neo-red)';
+          else if (type === 'COLLAPSE') typeColor = 'var(--neo-orange)';
+          else if (type === 'PANIC') typeColor = 'var(--neo-pink)';
+          else if (type === 'ZONE_BREACH') typeColor = 'var(--neo-yellow)';
+
+          let detailText = '';
+          if (inc.event_type === 'fall') {
+            detailText = `Fall in ${inc.zone_name || 'Active Zone'}`;
+          } else if (inc.event_type === 'collapse') {
+            detailText = `Unresponsive person in ${inc.zone_name || 'Active Zone'}`;
+          } else if (inc.event_type === 'panic') {
+            detailText = `Panic movement in ${inc.zone_name || 'Active Zone'}`;
+          } else {
+            const count = inc.people_count || (inc.details && inc.details.occupancy) || '--';
+            const thresh = inc.threshold || (inc.details && inc.details.capacity) || '--';
+            detailText = `Headcount: ${count} (Limit: ${thresh})`;
+          }
+
+          const snapUrl = inc.snapshot_url || (inc.snapshot_filename ? `/api/snapshots/${inc.snapshot_filename}` : '');
+
           return `
             <div class="${cardClass}" id="card-${inc.id}">
               <div class="d-flex justify-content-between align-items-center mb-1">
-                <span class="badge border-2 border-black text-uppercase font-mono fw-bold" style="font-size: 0.7rem; background: ${isAck ? 'var(--neo-lime)' : 'var(--neo-red)'}; color: #000;">
-                  ${isAck ? 'Acknowledged' : 'Critical Alert'}
+                <span class="badge border-2 border-black text-uppercase font-mono fw-bold" style="font-size: 0.7rem; background: ${isAck ? 'var(--neo-lime)' : typeColor}; color: #000;">
+                  ${isAck ? 'Acknowledged' : type}
                 </span>
                 <span class="small font-mono fw-bold" style="font-size: 0.72rem;">${inc.timestamp}</span>
               </div>
               <div class="small fw-bold text-black font-mono">
-                Crowd Count: <span class="fw-bold">${inc.people_count}</span> (Limit: ${inc.threshold})
+                ${detailText}
               </div>
-              <a href="${inc.snapshot_url}" target="_blank" title="Click to view full snapshot">
-                <img src="${inc.snapshot_url}" class="incident-thumb" alt="Incident Snapshot" onerror="this.style.display='none'" />
-              </a>
+              ${snapUrl ? `
+                <a href="${snapUrl}" target="_blank" title="Click to view full snapshot">
+                  <img src="${snapUrl}" class="incident-thumb" alt="Incident Snapshot" onerror="this.style.display='none'" />
+                </a>` : ''}
               <div class="mt-2 d-flex justify-content-end">
                 ${isAck ? '<span class="small font-mono fw-bold"><i class="bi bi-check-all me-1"></i>Handled</span>' : 
                   `<button class="btn-neo btn-neo-yellow py-0 px-2 small font-mono" onclick="acknowledgeIncident('${inc.id}')">Acknowledge</button>`
@@ -1431,6 +2134,96 @@
         }
       } catch (err) {
         console.error('Failed to fetch camera stats:', err);
+      }
+    }
+
+    // =========================================================================
+    // Privacy Face Anonymization Mode
+    // =========================================================================
+    let privacyEnabled = false;
+
+    async function checkPrivacyStatus() {
+      try {
+        const res = await fetch('/api/settings/privacy');
+        if (res.ok) {
+          const data = await res.json();
+          privacyEnabled = Boolean(data.enabled);
+          updatePrivacyUI();
+        }
+      } catch (e) {
+        console.warn('Privacy fetch error:', e);
+      }
+    }
+
+    function updatePrivacyUI() {
+      const btn = document.getElementById('privacyBtn');
+      const text = document.getElementById('privacyBtnText');
+      if (!btn) return;
+      if (privacyEnabled) {
+        btn.classList.add('active');
+        if (text) text.textContent = 'Privacy: ON';
+      } else {
+        btn.classList.remove('active');
+        if (text) text.textContent = 'Privacy: OFF';
+      }
+    }
+
+    async function togglePrivacyMode() {
+      privacyEnabled = !privacyEnabled;
+      updatePrivacyUI();
+      try {
+        const res = await fetch('/api/settings/privacy', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled: privacyEnabled })
+        });
+        if (res.ok) {
+          showToast(`Face Privacy Anonymization ${privacyEnabled ? 'ACTIVATED' : 'DEACTIVATED'} [DPDPA 2023]`);
+        }
+      } catch (err) {
+        console.error('Privacy toggle error:', err);
+      }
+    }
+
+    checkPrivacyStatus();
+
+    // =========================================================================
+    // Staged Incident Simulation
+    // =========================================================================
+    function openSimulateModal() {
+      const modal = document.getElementById('simulateModalBackdrop');
+      if (modal) modal.style.display = 'block';
+    }
+
+    function closeSimulateModal() {
+      const modal = document.getElementById('simulateModalBackdrop');
+      if (modal) modal.style.display = 'none';
+    }
+
+    async function handleLiveSimulateSubmit(e) {
+      e.preventDefault();
+      const type = document.getElementById('simLiveType').value;
+      const zone = document.getElementById('simLiveZone').value.trim();
+      const conf = parseFloat(document.getElementById('simLiveConfidence').value);
+
+      try {
+        const res = await fetch('/api/incidents/simulate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            event_type: type,
+            zone_name: zone,
+            confidence: conf
+          })
+        });
+
+        if (res.ok) {
+          closeSimulateModal();
+          showToast(`SIMULATION EXECUTED: ${type.toUpperCase()} DRILL DISPATCHED`);
+          loadIncidents();
+        }
+      } catch (err) {
+        console.error('Simulation dispatch failed:', err);
       }
     }
 

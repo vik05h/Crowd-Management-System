@@ -36,3 +36,8 @@ static/processed/*.jpg
 test_clean_boxes.jpg
 test_heatmap.jpg
 test.mp4
+
+# Databases
+*.db
+*.sqlite
+*.sqlite3

@@ -51,8 +51,26 @@ CMS is an advanced crowd management platform designed to enhance safety, efficie
 - **Heatmap Visualization:**  
   Dynamic heatmaps overlay movement and density patterns, highlighting high-traffic zones and congestion areas.
 
+- **Spatial Safety Intelligence SOC (`/analytics`):**  
+  Dedicated command center dashboard featuring 4 interactive Chart.js graphs (Historical Density Trend, Sector Occupancy vs Limit, Dwell Duration Profiling, and Incident Breakdown), Kit Langton rolling digits, and live WebSocket telemetry.
+
+- **Ultralytics YOLO26-Pose Behavioral Safety Engine:**  
+  Real-time 17-keypoint skeleton tracking powered by official Ultralytics YOLO26 Pose models (`yolo26n-pose.pt`, `yolo26s-pose.pt`, `yolo26m-pose.pt`) with temporal stride frame-skipping (saving 50-66% compute). Detects human falls (horizontal spine angle > 52 deg for >= 1.6s), unresponsive/collapsed persons (stillness in fallen pose for >= 6.0s), and panic surge strides with automated snapshot photo logging.
+
+- **Interactive Live On-Stream Sector Calibration & Dwell Analytics:**  
+  Configurable multi-vertex polygonal sectors (`cv2.pointPolygonTest`) tracking per-sector occupancy, individual pedestrian dwell times, and sustained capacity breaches. Features an interactive On-Stream Calibration Mode allowing operators to visually drag corner handles directly over live camera footage.
+
+- **Hardware Acceleration & Tiered Scalability Engine:**  
+  Accelerates inference across NVIDIA GPUs using FP16 Tensor Cores and tiered performance profiles: Eco/Laptop (RTX 3050/4050: 640px, Stride 2), Balanced (RTX 4060/4070: 640px, Stride 1), and Ultra (RTX 4080/4090/A100: 1024px, Stride 1), alongside background NVIDIA TensorRT engine compilation.
+
+- **Real-Time WebSocket & SSE Event Bus:**  
+  Low-latency bidirectional WebSocket hub (`/ws/events`) with Server-Sent Events (`/api/events/stream`) fallback broadcasting live telemetry, zone occupancy transitions, and emergency safety alerts to all connected operator stations.
+
+- **Role-Based Access Control (RBAC) & JWT Security:**  
+  JWT-based authentication with PBKDF2 password hashing supporting Admin, Operator, and Viewer roles with route-level authorization.
+
 - **Neo-Brutalism UI Theme Architecture:**  
-  Bold, unapologetic, high-contrast aesthetic across all views (`/`, `/video_studio`, `/live_preview`, `/live_camera`) inspired by the Neo-Brutalism UI Library. Features thick black outlines (`border: 2px solid #000` / `3px solid #000`), signature hard non-blurred offset drop shadows (`box-shadow: 4px 4px 0px #000`, `6px 6px 0px #000`, `8px 8px 0px #000`), tactile mechanical click states (`active: translate(2px, 2px) box-shadow: 0px 0px 0px #000`), punchy pastel color blocks (`#FFE500` Yellow, `#A6FAFF` Cyan, `#B8FF9F` Lime, `#FFA6F6` Pink, `#FFC29F` Orange, `#FF9F9F` Red), clean paper canvas (`#FAF7F2`), and strictly zero emojis.
+  Bold, unapologetic, high-contrast aesthetic across all views (`/`, `/analytics`, `/video_studio`, `/live_preview`, `/live_camera`) inspired by the Neo-Brutalism UI Library. Features thick black outlines (`border: 2px solid #000` / `3px solid #000`), signature hard non-blurred offset drop shadows (`box-shadow: 4px 4px 0px #000`, `6px 6px 0px #000`, `8px 8px 0px #000`), tactile mechanical click states (`active: translate(2px, 2px) box-shadow: 0px 0px 0px #000`), punchy pastel color blocks (`#FFE500` Yellow, `#A6FAFF` Cyan, `#B8FF9F` Lime, `#FFA6F6` Pink, `#FFC29F` Orange, `#FF9F9F` Red), clean paper canvas (`#FAF7F2`), and strictly zero emojis.
 
 - **Kit Langton Rolling Number Reels:**  
   Vertical sliding digit reels (`.rolling-digit-reel`) with spring kinematics (`cubic-bezier(0.16, 1, 0.3, 1)`) animating numerical benchmarks, latency, headcount, and live telemetry on incoming sensor changes.
@@ -62,6 +80,18 @@ CMS is an advanced crowd management platform designed to enhance safety, efficie
 
 - **Vengeance UI Specular Light Physics:**  
   Tactile buttons (`.btn-neo`) with dynamic radial specular light reflections tracking cursor mouse position (`--mouse-x`, `--mouse-y`) and instant tactile click feedback.
+
+- **Multi-Camera Surveillance CCTV Grid (`/cameras`):**  
+  Selectable 2x2 multi-feed CCTV grid and 1+3 focus mode monitoring up to 4 simultaneous camera streams with independent headcount telemetry, FPS counters, resolution status, and one-click camera expansion.
+
+- **Real-Time Privacy Protection & Face Anonymization (DPDPA 2023 / GDPR):**  
+  Real-time facial identity protection in `cms/privacy/face_blur.py` utilizing YOLO-Pose cranial keypoints (nose, eyes, ears) and head geometry tracking with irreversible Gaussian blurring, togglable on the fly across surveillance streams and batch processing jobs.
+
+- **CSV Data Export Engine (`/api/export/csv`):**  
+  One-click RFC 4180 compliant CSV data export for security incident audit trails, historical crowd density time series, and polygonal sector dwell profiles.
+
+- **Staged Safety Incident Drill Simulator (`/api/incidents/simulate`):**  
+  Interactive drill dispatcher allowing security operators to simulate fall detection, unconscious/collapsed individuals, panic surges, and sector capacity breaches with live siren alerting, snapshot generation, and WebSocket broadcast.
 
 - **FastAPI Backend:**  
   Clean, high-performance asynchronous and threaded REST endpoints adhering to modern FastAPI and Pydantic best practices.
@@ -186,6 +216,8 @@ Trained weights are automatically saved to `runs/detect/yolo26m_crowdhuman/weigh
 | Endpoint | Method | Description |
 | :--- | :--- | :--- |
 | `/` | `GET` | Main Dashboard with system status and mode selector |
+| `/analytics` | `GET` | Spatial Safety Intelligence SOC dashboard with Chart.js analytics |
+| `/cameras` | `GET` | Multi-Camera surveillance CCTV grid layout (2x2 and 1+3 focus) |
 | `/video_studio` | `GET` | Video Processing Studio with batch monitor and video player |
 | `/live_preview` | `GET` | Real-time surveillance camera feed with alert engine |
 | `/upload` | `POST` | Upload video file and initiate batch processing |
@@ -193,6 +225,23 @@ Trained weights are automatically saved to `runs/detect/yolo26m_crowdhuman/weigh
 | `/api/processing_status` | `GET` | Progress telemetry (`current_frame`, `total_frames`, `percent`, `fps`, `eta`, metrics) |
 | `/api/processed_videos` | `GET` | List stored H.264 processed videos with metadata |
 | `/processed/{filename}` | `GET` | Stream or download web-playable H.264 video with FastStart |
+| `/api/analytics/summary` | `GET` | Historical and live spatial safety metrics summary |
+| `/api/analytics/trends` | `GET` | Historical crowd density trend time series for Chart.js |
+| `/api/analytics/zones` | `GET` | Real-time polygonal security sector occupancy and dwell profiling |
+| `/api/zones` | `GET` | List all configured polygonal security sectors |
+| `/api/zones` | `POST` | Create or update a polygonal security sector |
+| `/api/zones/{id}` | `DELETE` | Remove a security sector configuration |
+| `/api/zones/toggle` | `POST` | Toggle polygonal sector overlay on video feeds |
+| `/api/pose/toggle` | `POST` | Toggle YOLO-Pose skeleton overlay on video feeds |
+| `/api/settings/privacy` | `GET` | Fetch real-time face privacy anonymization status (DPDPA 2023) |
+| `/api/settings/privacy` | `POST` | Toggle or set face privacy anonymization mode |
+| `/api/export/csv` | `GET` | Download RFC 4180 CSV data export for incidents, trends, or sectors |
+| `/api/incidents/simulate` | `POST` | Trigger simulated emergency safety drill (fall, collapse, panic, breach) |
+| `/api/cameras` | `GET` | List active surveillance cameras with live telemetry and status |
+| `/api/auth/login` | `POST` | Authenticate operator credentials and receive signed JWT |
+| `/api/auth/me` | `GET` | Retrieve authenticated operator profile |
+| `/ws/events` | `WebSocket` | Real-time bidirectional telemetry push for crowd counts and safety alerts |
+| `/api/events/stream` | `GET` | Server-Sent Events (SSE) fallback stream |
 | `/api/settings` | `GET` | Fetch security threshold, breach duration, cooldown, and webhook |
 | `/api/settings/threshold` | `POST` | Adjust live crowd capacity threshold |
 | `/api/settings/webhook` | `POST` | Configure external incident webhook URL |
@@ -211,6 +260,8 @@ The CMS backend adheres to enterprise defensive standards:
 - **Server-Side Request Forgery (SSRF) Defense**: Validates external webhook targets, prohibiting local, private (RFC1918), loopback (`127.0.0.0/8`, `::1`), and cloud metadata (`169.254.169.254`) IP addresses.
 - **Path Traversal Containment**: Enforces strict filesystem containment checks on incident snapshots and processed video delivery routes.
 - **Hardened CORS Policy**: Disallows wildcard credential propagation (`allow_credentials=False`) to prevent cross-origin session exploitation.
+- **Role-Based Access Control**: Route-level JWT authorization protecting sector modifications and system configuration.
+- **Privacy Anonymization**: DPDPA 2023 and GDPR compliant real-time face blurring pipeline preserving surveillance context while preventing identity leakage.
 
 ---
 
@@ -220,5 +271,5 @@ Run the full pytest suite:
 ```bash
 uv run pytest tests/ -v
 ```
-All 25 unit, integration, and security tests validate API routing, alert engines, dataset bounding box sanitization, batch inference pipelines, SSRF protection, and upload validation.
+All 37 unit, integration, and security tests validate API routing, alert engines, dataset bounding box sanitization, batch inference pipelines, SSRF protection, upload validation, PBKDF2 password hashing, JWT authorization, ZoneTracker point-in-polygon containment, PoseEngine execution, hardware acceleration profiles, live on-stream polygon calibration, PrivacyManager face blurring, CSV export engine, multi-camera grid telemetry, and staged incident simulation.
 

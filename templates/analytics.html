@@ -1,0 +1,1566 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>CMS Spatial Safety SOC | Real-Time Analytics & Pose Intelligence</title>
+
+  <!-- Google Fonts: Space Grotesk, Inter, JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
+
+  <!-- Bootstrap CSS & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+
+  <!-- Chart.js v4 -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.2/dist/chart.umd.min.js"></script>
+
+  <style>
+    /* ==========================================================================
+       Neo-Brutalism UI Design System Tokens
+       ========================================================================== */
+    :root {
+      --neo-bg: #FAF7F2;
+      --neo-surface: #FFFFFF;
+      --neo-black: #000000;
+      --neo-yellow: #FFE500;
+      --neo-yellow-light: #FFF480;
+      --neo-cyan: #A6FAFF;
+      --neo-cyan-light: #D4FCFF;
+      --neo-lime: #B8FF9F;
+      --neo-lime-light: #DDFFCE;
+      --neo-pink: #FFA6F6;
+      --neo-violet: #A8A6FF;
+      --neo-orange: #FFC29F;
+      --neo-red: #FF9F9F;
+      --neo-border-width: 3px;
+      --neo-shadow: 4px 4px 0px #000000;
+      --neo-shadow-lg: 6px 6px 0px #000000;
+      --neo-shadow-xl: 8px 8px 0px #000000;
+      --neo-shadow-sm: 2px 2px 0px #000000;
+      --font-display: 'Space Grotesk', -apple-system, sans-serif;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--neo-bg);
+      color: var(--neo-black);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+      background-image: radial-gradient(var(--neo-black) 1px, transparent 1px);
+      background-size: 24px 24px;
+      background-position: 0 0;
+    }
+
+    .font-mono { font-family: var(--font-mono); }
+    .font-display { font-family: var(--font-display); }
+
+    /* Cursor */
+    @media (pointer: fine) {
+      .layers-cursor-dot {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 8px;
+        height: 8px;
+        background-color: var(--neo-black);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 99999;
+        transform: translate(-50%, -50%);
+        transition: opacity 0.2s ease;
+      }
+      .layers-cursor-follower {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 36px;
+        height: 36px;
+        border: 2px solid var(--neo-black);
+        background: rgba(255, 229, 0, 0.45);
+        box-shadow: 2px 2px 0px var(--neo-black);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 99998;
+        transform: translate(-50%, -50%);
+        transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+                    height 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+                    background-color 0.2s ease;
+        will-change: left, top;
+      }
+      .layers-cursor-follower.hovering {
+        width: 58px;
+        height: 58px;
+        background: rgba(166, 250, 255, 0.6);
+        box-shadow: 4px 4px 0px var(--neo-black);
+      }
+    }
+
+    /* Buttons */
+    .btn-neo {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.65rem 1.35rem;
+      border: 3px solid var(--neo-black);
+      border-radius: 8px;
+      background: var(--neo-yellow);
+      color: var(--neo-black);
+      font-weight: 700;
+      font-size: 0.9rem;
+      font-family: var(--font-sans);
+      text-decoration: none;
+      box-shadow: var(--neo-shadow);
+      cursor: pointer;
+      overflow: hidden;
+      transition: transform 0.12s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.12s cubic-bezier(0.2, 0, 0, 1);
+      user-select: none;
+    }
+    .btn-neo:hover {
+      transform: translate(-2px, -2px);
+      box-shadow: var(--neo-shadow-lg);
+      color: var(--neo-black);
+    }
+    .btn-neo:active {
+      transform: translate(2px, 2px);
+      box-shadow: 0px 0px 0px var(--neo-black);
+    }
+
+    .btn-neo-cyan { background: var(--neo-cyan); }
+    .btn-neo-lime { background: var(--neo-lime); }
+    .btn-neo-pink { background: var(--neo-pink); }
+    .btn-neo-orange { background: var(--neo-orange); }
+    .btn-neo-white { background: var(--neo-surface); }
+    .btn-neo-dark { background: var(--neo-black); color: #FFFFFF; }
+    .btn-neo-dark:hover { color: var(--neo-yellow); }
+
+    .btn-neo-sm {
+      padding: 0.35rem 0.85rem;
+      font-size: 0.8rem;
+      border-width: 2px;
+      box-shadow: var(--neo-shadow-sm);
+    }
+
+    /* Cards */
+    .neo-card {
+      background: var(--neo-surface);
+      border: 3px solid var(--neo-black);
+      border-radius: 12px;
+      box-shadow: var(--neo-shadow-lg);
+      padding: 1.5rem;
+      position: relative;
+    }
+
+    .neo-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-bottom: 3px solid var(--neo-black);
+      padding-bottom: 0.85rem;
+      margin-bottom: 1.25rem;
+    }
+
+    /* Badges */
+    .neo-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.25rem 0.65rem;
+      border: 2px solid var(--neo-black);
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 800;
+      text-transform: uppercase;
+      box-shadow: var(--neo-shadow-sm);
+      letter-spacing: 0.04em;
+    }
+
+    .badge-yellow { background: var(--neo-yellow); }
+    .badge-cyan { background: var(--neo-cyan); }
+    .badge-lime { background: var(--neo-lime); }
+    .badge-pink { background: var(--neo-pink); }
+    .badge-orange { background: var(--neo-orange); }
+    .badge-red { background: var(--neo-red); }
+    .badge-white { background: var(--neo-surface); }
+
+    /* Kit Langton Rolling Numbers */
+    .rolling-number-wrap {
+      display: inline-flex;
+      align-items: flex-start;
+      overflow: hidden;
+      height: 1.25em;
+      line-height: 1.25em;
+      vertical-align: -0.15em;
+      font-variant-numeric: tabular-nums;
+      font-family: var(--font-mono);
+      font-weight: 700;
+    }
+    .rolling-digit-reel {
+      display: flex;
+      flex-direction: column;
+      transform: translateY(0%);
+      transition: transform 1.25s cubic-bezier(0.16, 1, 0.3, 1);
+      will-change: transform;
+    }
+    .rolling-digit-reel span {
+      display: block;
+      height: 1.25em;
+      line-height: 1.25em;
+      text-align: center;
+    }
+
+    /* Navbar */
+    .neo-navbar {
+      background: var(--neo-surface);
+      border-bottom: 3px solid var(--neo-black);
+      box-shadow: 0 4px 0 var(--neo-black);
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      padding: 0.85rem 1.5rem;
+    }
+
+    .nav-pill-neo {
+      border: 2px solid var(--neo-black);
+      border-radius: 6px;
+      padding: 0.4rem 0.9rem;
+      font-weight: 700;
+      font-size: 0.85rem;
+      color: var(--neo-black);
+      text-decoration: none;
+      background: var(--neo-surface);
+      box-shadow: var(--neo-shadow-sm);
+      transition: all 0.12s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 0.4rem;
+    }
+    .nav-pill-neo:hover {
+      background: var(--neo-cyan);
+      transform: translate(-1px, -1px);
+      box-shadow: var(--neo-shadow);
+      color: var(--neo-black);
+    }
+    .nav-pill-neo.active {
+      background: var(--neo-yellow);
+      box-shadow: 0 0 0 #000;
+      transform: translate(2px, 2px);
+    }
+
+    /* Table styling */
+    .neo-table-wrap {
+      border: 3px solid var(--neo-black);
+      border-radius: 8px;
+      overflow: hidden;
+      box-shadow: var(--neo-shadow);
+      background: var(--neo-surface);
+    }
+    .neo-table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 0;
+    }
+    .neo-table th {
+      background: var(--neo-yellow);
+      color: var(--neo-black);
+      font-weight: 800;
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      padding: 0.85rem 1rem;
+      border-bottom: 3px solid var(--neo-black);
+      border-right: 2px solid var(--neo-black);
+    }
+    .neo-table th:last-child {
+      border-right: none;
+    }
+    .neo-table td {
+      padding: 0.75rem 1rem;
+      font-size: 0.88rem;
+      border-bottom: 2px solid var(--neo-black);
+      border-right: 2px solid var(--neo-black);
+      vertical-align: middle;
+    }
+    .neo-table td:last-child {
+      border-right: none;
+    }
+    .neo-table tr:last-child td {
+      border-bottom: none;
+    }
+    .neo-table tr:hover td {
+      background: var(--neo-cyan-light);
+    }
+
+    /* Modal dialog */
+    .neo-modal-content {
+      background: var(--neo-bg);
+      border: 4px solid var(--neo-black);
+      border-radius: 12px;
+      box-shadow: var(--neo-shadow-xl);
+    }
+    .neo-modal-header {
+      background: var(--neo-yellow);
+      border-bottom: 3px solid var(--neo-black);
+      padding: 1rem 1.5rem;
+    }
+    .neo-input {
+      border: 3px solid var(--neo-black);
+      border-radius: 6px;
+      padding: 0.6rem 0.85rem;
+      font-family: var(--font-sans);
+      font-weight: 600;
+      box-shadow: var(--neo-shadow-sm);
+      width: 100%;
+    }
+    .neo-input:focus {
+      outline: none;
+      box-shadow: var(--neo-shadow);
+      border-color: var(--neo-black);
+    }
+
+    /* Alert ticker */
+    .alert-ticker {
+      background: var(--neo-red);
+      border: 3px solid var(--neo-black);
+      border-radius: 8px;
+      padding: 0.75rem 1.25rem;
+      box-shadow: var(--neo-shadow);
+      display: none;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 1.5rem;
+      animation: alertPulse 2s infinite ease-in-out;
+    }
+    @keyframes alertPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.008); }
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Fluid Follower Cursor -->
+  <div class="layers-cursor-dot" id="cursorDot"></div>
+  <div class="layers-cursor-follower" id="cursorFollower"></div>
+
+  <!-- Top Navigation Bar -->
+  <nav class="neo-navbar">
+    <div class="container-fluid d-flex flex-wrap align-items-center justify-content-between gap-3">
+      <div class="d-flex align-items-center gap-3">
+        <a href="/" class="text-decoration-none d-flex align-items-center gap-2">
+          <div style="width: 38px; height: 38px; background: var(--neo-yellow); border: 2px solid #000; border-radius: 6px; box-shadow: 2px 2px 0 #000; display: grid; place-items: center;">
+            <i class="bi bi-shield-shaded fs-5 text-black"></i>
+          </div>
+          <span class="font-display fw-bold fs-5 text-black">CMS SPATIAL SAFETY</span>
+        </a>
+        <span class="neo-badge badge-pink font-mono">SOC COMMAND V2.1</span>
+        <span class="neo-badge badge-lime font-mono" id="connectionBadge">
+          <span class="spinner-grow spinner-grow-sm me-1" style="width: 8px; height: 8px;" role="status"></span>
+          LIVE WS
+        </span>
+      </div>
+
+      <div class="d-flex align-items-center gap-2">
+        <a href="/" class="nav-pill-neo">
+          <i class="bi bi-grid-fill"></i> Overview
+        </a>
+        <a href="/live_preview" class="nav-pill-neo">
+          <i class="bi bi-camera-video-fill"></i> Live Surveillance
+        </a>
+        <a href="/video_studio" class="nav-pill-neo">
+          <i class="bi bi-film"></i> Video Studio
+        </a>
+        <a href="/cameras" class="nav-pill-neo">
+          <i class="bi bi-grid-3x3"></i> Multi-Cam
+        </a>
+        <a href="/analytics" class="nav-pill-neo active">
+          <i class="bi bi-graph-up-arrow"></i> Analytics SOC
+        </a>
+        <button class="btn-neo btn-neo-sm btn-neo-dark ms-2" id="loginBtn" onclick="openAuthModal()">
+          <i class="bi bi-person-badge"></i> <span id="userLabel">Operator</span>
+        </button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main Content Container -->
+  <main class="container-fluid px-4 py-4">
+
+    <!-- Active Safety Alert Banner -->
+    <div class="alert-ticker" id="safetyAlertBanner">
+      <div class="d-flex align-items-center gap-3">
+        <span class="neo-badge badge-white font-mono fs-6 text-danger">EMERGENCY ALERT</span>
+        <span class="fw-bold fs-6" id="alertBannerText">Safety breach sustained in Active Sector.</span>
+      </div>
+      <button class="btn-neo btn-neo-sm btn-neo-white" onclick="dismissAlertBanner()">
+        Dismiss
+      </button>
+    </div>
+
+    <!-- Header Section -->
+    <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
+      <div>
+        <h1 class="font-display fw-bold display-6 mb-1">Spatial Safety Analytics</h1>
+        <p class="text-muted fw-semibold mb-0">Real-time occupancy density, YOLO-Pose behavioral incidents, and polygonal sector dwell profiling.</p>
+      </div>
+      <div class="d-flex flex-wrap align-items-center gap-2">
+        <button class="btn-neo btn-neo-cyan btn-neo-sm" id="togglePoseBtn" onclick="togglePoseDetection()">
+          <i class="bi bi-person-arms-up"></i> Pose Skeletons: ON
+        </button>
+        <button class="btn-neo btn-neo-lime btn-neo-sm" id="toggleZonesBtn" onclick="toggleZonesOverlay()">
+          <i class="bi bi-bounding-box-circles"></i> Sectors Overlay: ON
+        </button>
+        <button class="btn-neo btn-neo-yellow btn-neo-sm" onclick="openSectorModal()">
+          <i class="bi bi-plus-circle-fill"></i> Add Security Sector
+        </button>
+      </div>
+    </div>
+
+    <!-- 4 High-Density Stat Cards -->
+    <div class="row g-3 mb-4">
+      <!-- 24h Peak Crowd -->
+      <div class="col-12 col-sm-6 col-xl-3">
+        <div class="neo-card" style="background: var(--neo-yellow-light);">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="font-mono fw-bold fs-7 text-uppercase">24h Peak Occupancy</span>
+            <span class="neo-badge badge-yellow font-mono">PEAK</span>
+          </div>
+          <div class="d-flex align-items-baseline gap-2">
+            <div class="font-display fw-bold display-5" id="statPeakCrowd">
+              <span class="rolling-number-wrap"><span class="rolling-digit-reel"><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span></span></span>
+            </div>
+            <span class="fw-bold text-muted">people</span>
+          </div>
+          <p class="text-muted small mb-0 mt-2">Maximum instantaneous density</p>
+        </div>
+      </div>
+
+      <!-- Average Crowd Density -->
+      <div class="col-12 col-sm-6 col-xl-3">
+        <div class="neo-card" style="background: var(--neo-cyan-light);">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="font-mono fw-bold fs-7 text-uppercase">Average Density</span>
+            <span class="neo-badge badge-cyan font-mono">24H AVG</span>
+          </div>
+          <div class="d-flex align-items-baseline gap-2">
+            <div class="font-display fw-bold display-5" id="statAvgCrowd">
+              <span class="rolling-number-wrap"><span class="rolling-digit-reel"><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span></span></span>
+            </div>
+            <span class="fw-bold text-muted">avg / frame</span>
+          </div>
+          <p class="text-muted small mb-0 mt-2">Rolling historical baseline</p>
+        </div>
+      </div>
+
+      <!-- Configured Security Sectors -->
+      <div class="col-12 col-sm-6 col-xl-3">
+        <div class="neo-card" style="background: var(--neo-lime-light);">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="font-mono fw-bold fs-7 text-uppercase">Active Sectors</span>
+            <span class="neo-badge badge-lime font-mono">POLYGONS</span>
+          </div>
+          <div class="d-flex align-items-baseline gap-2">
+            <div class="font-display fw-bold display-5" id="statZoneCount">
+              <span class="rolling-number-wrap"><span class="rolling-digit-reel"><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span></span></span>
+            </div>
+            <span class="fw-bold text-muted">monitored</span>
+          </div>
+          <p class="text-muted small mb-0 mt-2">Geometric boundary tracking</p>
+        </div>
+      </div>
+
+      <!-- Total Safety Breaches & Incidents -->
+      <div class="col-12 col-sm-6 col-xl-3">
+        <div class="neo-card" style="background: #FFE5E5;">
+          <div class="d-flex align-items-center justify-content-between mb-2">
+            <span class="font-mono fw-bold fs-7 text-uppercase">Safety Incidents</span>
+            <span class="neo-badge badge-red font-mono" id="unackBadge">0 UNACK</span>
+          </div>
+          <div class="d-flex align-items-baseline gap-2">
+            <div class="font-display fw-bold display-5 text-danger" id="statTotalEvents">
+              <span class="rolling-number-wrap"><span class="rolling-digit-reel"><span>0</span><span>1</span><span>2</span><span>3</span><span>4</span><span>5</span><span>6</span><span>7</span><span>8</span><span>9</span></span></span>
+            </div>
+            <span class="fw-bold text-muted">events logged</span>
+          </div>
+          <p class="text-muted small mb-0 mt-2">Falls, collapses, and breaches</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Row 1: Historical Trend & Live Zone Occupancy -->
+    <div class="row g-4 mb-4">
+      <!-- Historical Density Trend -->
+      <div class="col-12 col-lg-8">
+        <div class="neo-card h-100">
+          <div class="neo-card-header">
+            <div>
+              <h5 class="font-display fw-bold mb-0">Historical Crowd Density Trend</h5>
+              <span class="text-muted small">Headcount fluctuations across camera sectors</span>
+            </div>
+            <div class="d-flex align-items-center gap-1" id="timeFilterButtons">
+              <button class="btn-neo btn-neo-sm btn-neo-white" onclick="changeTrendRange(1.0)">1H</button>
+              <button class="btn-neo btn-neo-sm btn-neo-white" onclick="changeTrendRange(6.0)">6H</button>
+              <button class="btn-neo btn-neo-sm btn-neo-yellow" onclick="changeTrendRange(24.0)">24H</button>
+              <button class="btn-neo btn-neo-sm btn-neo-white" onclick="changeTrendRange(168.0)">7D</button>
+              <a href="/api/export/csv?type=trends" class="btn-neo btn-neo-sm btn-neo-white ms-1" title="Export crowd density time series">
+                <i class="bi bi-download"></i> CSV
+              </a>
+            </div>
+          </div>
+          <div style="height: 320px; position: relative;">
+            <canvas id="trendChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Real-Time Sector Occupancy vs Threshold -->
+      <div class="col-12 col-lg-4">
+        <div class="neo-card h-100">
+          <div class="neo-card-header">
+            <div>
+              <h5 class="font-display fw-bold mb-0">Sector Occupancy</h5>
+              <span class="text-muted small">Live headcount vs sector limit</span>
+            </div>
+            <span class="neo-badge badge-yellow font-mono">LIVE</span>
+          </div>
+          <div style="height: 320px; position: relative;">
+            <canvas id="zoneOccupancyChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Charts Row 2: Average Dwell Duration & Pose Incidents Breakdown -->
+    <div class="row g-4 mb-4">
+      <!-- Sector Average Dwell Duration -->
+      <div class="col-12 col-lg-6">
+        <div class="neo-card h-100">
+          <div class="neo-card-header">
+            <div>
+              <h5 class="font-display fw-bold mb-0">Sector Dwell-Time Profiling</h5>
+              <span class="text-muted small">Average track duration per polygon (seconds)</span>
+            </div>
+            <span class="neo-badge badge-cyan font-mono">BOTTLENECKS</span>
+          </div>
+          <div style="height: 280px; position: relative;">
+            <canvas id="dwellTimeChart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pose Intelligence & Incident Distribution -->
+      <div class="col-12 col-lg-6">
+        <div class="neo-card h-100">
+          <div class="neo-card-header">
+            <div>
+              <h5 class="font-display fw-bold mb-0">Safety Incidents Breakdown</h5>
+              <span class="text-muted small">Pose detection & sustained overcrowding events</span>
+            </div>
+            <span class="neo-badge badge-pink font-mono">YOLO-POSE</span>
+          </div>
+          <div style="height: 280px; position: relative;">
+            <canvas id="incidentsDoughnutChart"></canvas>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Configured Security Sectors List -->
+    <div class="neo-card mb-4">
+      <div class="neo-card-header">
+        <div>
+          <h5 class="font-display fw-bold mb-0">Active Security Sectors</h5>
+          <span class="text-muted small">Configured polygonal boundary surveillance zones</span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <a href="/api/export/csv?type=zones" class="btn-neo btn-neo-sm btn-neo-white" title="Export sectors data">
+            <i class="bi bi-download"></i> Export CSV
+          </a>
+          <button class="btn-neo btn-neo-sm btn-neo-yellow" onclick="openSectorModal()">
+            <i class="bi bi-plus-circle"></i> Add Sector
+          </button>
+        </div>
+      </div>
+
+      <div class="row g-3" id="sectorCardsContainer">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+
+    <!-- Real-Time Safety Incidents Audit Log -->
+    <div class="neo-card">
+      <div class="neo-card-header">
+        <div>
+          <h5 class="font-display fw-bold mb-0">Safety Incidents & Audit Log</h5>
+          <span class="text-muted small">Recorded falls, unresponsive persons, and capacity breaches</span>
+        </div>
+        <div class="d-flex align-items-center gap-2">
+          <button class="btn-neo btn-neo-sm btn-neo-pink" onclick="openSimulateModal()">
+            <i class="bi bi-broadcast"></i> Simulate Drill
+          </button>
+          <a href="/api/export/csv?type=incidents" class="btn-neo btn-neo-sm btn-neo-cyan" title="Download incident records">
+            <i class="bi bi-file-earmark-spreadsheet"></i> Export CSV
+          </a>
+          <button class="btn-neo btn-neo-sm btn-neo-white" onclick="fetchIncidents()">
+            <i class="bi bi-arrow-clockwise"></i> Refresh Log
+          </button>
+        </div>
+      </div>
+
+      <div class="neo-table-wrap">
+        <table class="neo-table">
+          <thead>
+            <tr>
+              <th>Incident ID</th>
+              <th>Event Type</th>
+              <th>Sector / Location</th>
+              <th>Timestamp</th>
+              <th>Confidence</th>
+              <th>Snapshot</th>
+              <th>Status</th>
+              <th>Action</th>
+            </tr>
+          </thead>
+          <tbody id="incidentsTableBody">
+            <tr>
+              <td colspan="8" class="text-center py-4 text-muted fw-semibold">Loading security audit records...</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- Add Security Sector Modal -->
+  <div class="modal fade" id="sectorModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content neo-modal-content">
+        <div class="neo-modal-header d-flex align-items-center justify-content-between">
+          <h5 class="modal-title font-display fw-bold mb-0">Define Security Sector</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <form id="sectorForm" onsubmit="handleSectorSubmit(event)">
+            <div class="mb-3">
+              <label class="form-label font-mono fw-bold small text-uppercase">Sector Name</label>
+              <input type="text" id="sectorNameInput" class="neo-input" placeholder="e.g. Stage Front West" required />
+            </div>
+            <div class="mb-3">
+              <label class="form-label font-mono fw-bold small text-uppercase">Sector Color</label>
+              <div class="d-flex gap-2">
+                <input type="color" id="sectorColorInput" class="form-control form-control-color neo-input p-1" value="#FFE500" style="width: 60px; height: 42px;" />
+                <input type="text" id="sectorColorHex" class="neo-input font-mono" value="#FFE500" readonly />
+              </div>
+            </div>
+            <div class="mb-3">
+              <label class="form-label font-mono fw-bold small text-uppercase">Capacity Limit (Max People)</label>
+              <input type="number" id="sectorCapacityInput" class="neo-input" min="1" max="500" value="15" required />
+            </div>
+            <div class="mb-3">
+              <label class="form-label font-mono fw-bold small text-uppercase">Polygon Coordinates (JSON [ [x, y], ... ])</label>
+              <textarea id="sectorPolygonInput" class="neo-input font-mono small" rows="3" required placeholder="[[50, 50], [250, 50], [250, 350], [50, 350]]">[[100, 100], [400, 100], [400, 400], [100, 400]]</textarea>
+              <div class="form-text small">Provide 3 or more vertices defining the polygon region.</div>
+            </div>
+            <div class="d-flex justify-content-end gap-2 mt-4">
+              <button type="button" class="btn-neo btn-neo-white btn-neo-sm" data-bs-dismiss="modal">Cancel</button>
+              <button type="submit" class="btn-neo btn-neo-yellow btn-neo-sm">Save Sector</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Snapshot Inspection Modal -->
+  <div class="modal fade" id="snapshotModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg modal-dialog-centered">
+      <div class="modal-content neo-modal-content">
+        <div class="neo-modal-header d-flex align-items-center justify-content-between">
+          <h5 class="modal-title font-display fw-bold mb-0" id="snapshotModalTitle">Incident Photo Snapshot</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-3 text-center bg-black">
+          <img id="snapshotModalImg" src="" alt="Incident Snapshot" class="img-fluid border border-2 border-dark" style="max-height: 70vh;" />
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Incident Simulation Modal -->
+  <div class="modal fade" id="simulateModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content neo-modal-content">
+        <div class="neo-modal-header d-flex align-items-center justify-content-between">
+          <h5 class="modal-title font-display fw-bold mb-0">Simulate Safety Incident Drill</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <p class="small text-muted mb-3">
+            Trigger a real-time drill incident. The event will dispatch live alerts, sound the alarm siren, capture an annotated snapshot, broadcast to all dashboards, and log to the audit database.
+          </p>
+          <form id="simulateForm" onsubmit="handleSimulateSubmit(event)">
+            <div class="mb-3">
+              <label class="form-label font-mono fw-bold small text-uppercase">Incident Type</label>
+              <select id="simType" class="neo-input font-mono">
+                <option value="fall">Person Fall (Horizontal Spine Angle > 52 deg)</option>
+                <option value="collapse">Unresponsive / Collapsed Person (> 6s Stillness)</option>
+                <option value="panic">Panic Strides / Rapid Dispersal</option>
+                <option value="zone_breach">Sector Capacity Breach</option>
+                <option value="overcrowding">Sustained Overcrowding</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label font-mono fw-bold small text-uppercase">Target Security Sector</label>
+              <input type="text" id="simZone" class="neo-input" value="Main Entry Concourse" required />
+            </div>
+            <div class="mb-3">
+              <label class="form-label font-mono fw-bold small text-uppercase">Detection Confidence</label>
+              <input type="number" id="simConfidence" class="neo-input font-mono" min="0.5" max="1.0" step="0.01" value="0.96" required />
+            </div>
+            <div class="d-flex justify-content-end gap-2 mt-4">
+              <button type="button" class="btn-neo btn-neo-white btn-neo-sm" data-bs-dismiss="modal">Cancel</button>
+              <button type="submit" class="btn-neo btn-neo-pink btn-neo-sm">
+                <i class="bi bi-broadcast"></i> Execute Drill
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Auth Login Modal -->
+  <div class="modal fade" id="authModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content neo-modal-content">
+        <div class="neo-modal-header d-flex align-items-center justify-content-between">
+          <h5 class="modal-title font-display fw-bold mb-0">Operator Authentication</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <form id="authForm" onsubmit="handleLoginSubmit(event)">
+            <div class="mb-3">
+              <label class="form-label font-mono fw-bold small text-uppercase">Username</label>
+              <input type="text" id="authUsername" class="neo-input" value="admin" required />
+            </div>
+            <div class="mb-3">
+              <label class="form-label font-mono fw-bold small text-uppercase">Password</label>
+              <input type="password" id="authPassword" class="neo-input" value="admin123" required />
+            </div>
+            <div id="authErrorMsg" class="text-danger small mb-3 fw-bold" style="display: none;"></div>
+            <div class="d-flex justify-content-end gap-2 mt-4">
+              <button type="button" class="btn-neo btn-neo-white btn-neo-sm" data-bs-dismiss="modal">Cancel</button>
+              <button type="submit" class="btn-neo btn-neo-yellow btn-neo-sm">Authenticate</button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap JS Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    // =========================================================================
+    // Fluid Follower Cursor Kinematics
+    // =========================================================================
+    const dot = document.getElementById("cursorDot");
+    const follower = document.getElementById("cursorFollower");
+    let mouseX = window.innerWidth / 2, mouseY = window.innerHeight / 2;
+    let followerX = mouseX, followerY = mouseY;
+
+    window.addEventListener("mousemove", (e) => {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+      if (dot) {
+        dot.style.left = mouseX + "px";
+        dot.style.top = mouseY + "px";
+      }
+    });
+
+    function animateCursor() {
+      if (follower) {
+        followerX += (mouseX - followerX) * 0.22;
+        followerY += (mouseY - followerY) * 0.22;
+        follower.style.left = followerX + "px";
+        follower.style.top = followerY + "px";
+      }
+      requestAnimationFrame(animateCursor);
+    }
+    requestAnimationFrame(animateCursor);
+
+    document.querySelectorAll("button, a, input, select, textarea").forEach((el) => {
+      el.addEventListener("mouseenter", () => follower && follower.classList.add("hovering"));
+      el.addEventListener("mouseleave", () => follower && follower.classList.remove("hovering"));
+    });
+
+    // =========================================================================
+    // Kit Langton Rolling Digit Reels Helper
+    // =========================================================================
+    function updateRollingNumber(containerId, value) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+
+      const numStr = String(value);
+      container.innerHTML = "";
+
+      for (let i = 0; i < numStr.length; i++) {
+        const ch = numStr[i];
+        if (ch >= '0' && ch <= '9') {
+          const digit = parseInt(ch, 10);
+          const reelWrap = document.createElement("span");
+          reelWrap.className = "rolling-number-wrap";
+
+          const reel = document.createElement("span");
+          reel.className = "rolling-digit-reel";
+          for (let d = 0; d <= 9; d++) {
+            const digitSpan = document.createElement("span");
+            digitSpan.textContent = String(d);
+            reel.appendChild(digitSpan);
+          }
+          reelWrap.appendChild(reel);
+          container.appendChild(reelWrap);
+
+          requestAnimationFrame(() => {
+            reel.style.transform = `translateY(-${digit * 10}%)`;
+          });
+        } else {
+          const charSpan = document.createElement("span");
+          charSpan.textContent = ch;
+          charSpan.style.fontFamily = "var(--font-mono)";
+          container.appendChild(charSpan);
+        }
+      }
+    }
+
+    // =========================================================================
+    // Global State & Chart.js Instances
+    // =========================================================================
+    let trendChart = null;
+    let zoneOccupancyChart = null;
+    let dwellTimeChart = null;
+    let incidentsDoughnutChart = null;
+    let currentTrendRange = 24.0;
+    let authToken = localStorage.getItem("cms_token") || "";
+    let currentUser = localStorage.getItem("cms_user") || "Operator";
+    let poseEnabled = true;
+    let zonesEnabled = true;
+
+    // Initialize UI on load
+    document.addEventListener("DOMContentLoaded", () => {
+      initCharts();
+      fetchAnalyticsSummary();
+      fetchTrendData(currentTrendRange);
+      fetchZonesData();
+      fetchIncidents();
+      initWebSocket();
+      updateAuthUI();
+
+      // Color picker sync
+      const colorInput = document.getElementById("sectorColorInput");
+      const hexInput = document.getElementById("sectorColorHex");
+      if (colorInput && hexInput) {
+        colorInput.addEventListener("input", (e) => hexInput.value = e.target.value.toUpperCase());
+      }
+    });
+
+    // =========================================================================
+    // Chart.js Visual Configuration (Neo-Brutalism Theme)
+    // =========================================================================
+    const neoChartDefaults = {
+      color: '#000000',
+      font: { family: "'Inter', sans-serif", weight: '600', size: 11 },
+      grid: { color: 'rgba(0, 0, 0, 0.12)', lineWidth: 1 },
+      tooltip: {
+        backgroundColor: '#FFFFFF',
+        titleColor: '#000000',
+        bodyColor: '#000000',
+        borderColor: '#000000',
+        borderWidth: 2,
+        padding: 10,
+        boxPadding: 4,
+        cornerRadius: 6,
+        bodyFont: { family: "'JetBrains Mono', monospace", weight: '600' },
+      }
+    };
+
+    function initCharts() {
+      // 1. Historical Trend Line Chart
+      const trendCtx = document.getElementById("trendChart").getContext("2d");
+      trendChart = new Chart(trendCtx, {
+        type: 'line',
+        data: {
+          labels: [],
+          datasets: [{
+            label: 'Headcount',
+            data: [],
+            borderColor: '#000000',
+            borderWidth: 3,
+            backgroundColor: 'rgba(255, 229, 0, 0.35)',
+            fill: true,
+            tension: 0.25,
+            pointBackgroundColor: '#FFE500',
+            pointBorderColor: '#000000',
+            pointBorderWidth: 2,
+            pointRadius: 4,
+            pointHoverRadius: 6,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: neoChartDefaults.tooltip,
+          },
+          scales: {
+            x: {
+              grid: neoChartDefaults.grid,
+              ticks: neoChartDefaults,
+            },
+            y: {
+              beginAtZero: true,
+              grid: neoChartDefaults.grid,
+              ticks: neoChartDefaults,
+            }
+          }
+        }
+      });
+
+      // 2. Zone Occupancy Bar Chart
+      const zoneCtx = document.getElementById("zoneOccupancyChart").getContext("2d");
+      zoneOccupancyChart = new Chart(zoneCtx, {
+        type: 'bar',
+        data: {
+          labels: [],
+          datasets: [
+            {
+              label: 'Current Occupancy',
+              data: [],
+              backgroundColor: '#A6FAFF',
+              borderColor: '#000000',
+              borderWidth: 2,
+              borderRadius: 4,
+            },
+            {
+              label: 'Limit Threshold',
+              data: [],
+              backgroundColor: 'rgba(255, 159, 159, 0.45)',
+              borderColor: '#000000',
+              borderWidth: 2,
+              borderDash: [4, 4],
+              borderRadius: 4,
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: { font: neoChartDefaults.font, color: '#000' }
+            },
+            tooltip: neoChartDefaults.tooltip,
+          },
+          scales: {
+            x: { grid: neoChartDefaults.grid, ticks: neoChartDefaults },
+            y: { beginAtZero: true, grid: neoChartDefaults.grid, ticks: neoChartDefaults }
+          }
+        }
+      });
+
+      // 3. Dwell Time Bar Chart
+      const dwellCtx = document.getElementById("dwellTimeChart").getContext("2d");
+      dwellTimeChart = new Chart(dwellCtx, {
+        type: 'bar',
+        data: {
+          labels: [],
+          datasets: [{
+            label: 'Avg Dwell Duration (sec)',
+            data: [],
+            backgroundColor: '#B8FF9F',
+            borderColor: '#000000',
+            borderWidth: 2,
+            borderRadius: 6,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          indexAxis: 'y',
+          plugins: {
+            legend: { display: false },
+            tooltip: neoChartDefaults.tooltip,
+          },
+          scales: {
+            x: { beginAtZero: true, grid: neoChartDefaults.grid, ticks: neoChartDefaults },
+            y: { grid: neoChartDefaults.grid, ticks: neoChartDefaults }
+          }
+        }
+      });
+
+      // 4. Incidents Doughnut Chart
+      const incCtx = document.getElementById("incidentsDoughnutChart").getContext("2d");
+      incidentsDoughnutChart = new Chart(incCtx, {
+        type: 'doughnut',
+        data: {
+          labels: ['Falls', 'Unresponsive', 'Panic Strides', 'Overcrowding'],
+          datasets: [{
+            data: [0, 0, 0, 0],
+            backgroundColor: ['#FF9F9F', '#FFC29F', '#FFA6F6', '#FFE500'],
+            borderColor: '#000000',
+            borderWidth: 3,
+            hoverOffset: 6,
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'right',
+              labels: { font: neoChartDefaults.font, color: '#000', boxWidth: 16 }
+            },
+            tooltip: neoChartDefaults.tooltip,
+          }
+        }
+      });
+    }
+
+    // =========================================================================
+    // API Data Fetching
+    // =========================================================================
+    async function fetchAnalyticsSummary() {
+      try {
+        const res = await fetch("/api/analytics/summary");
+        if (!res.ok) return;
+        const data = await res.json();
+
+        updateRollingNumber("statPeakCrowd", data.peak_crowd || 0);
+        updateRollingNumber("statAvgCrowd", data.avg_crowd || 0);
+        updateRollingNumber("statZoneCount", data.zone_count || 0);
+        updateRollingNumber("statTotalEvents", data.events_24h || 0);
+
+        const unackBadge = document.getElementById("unackBadge");
+        if (unackBadge) {
+          unackBadge.textContent = `${data.unacknowledged_count || 0} UNACK`;
+          unackBadge.className = data.unacknowledged_count > 0 ? "neo-badge badge-red font-mono" : "neo-badge badge-lime font-mono";
+        }
+
+        // Update incidents doughnut chart
+        const byType = data.events_by_type || {};
+        const falls = byType['fall'] || 0;
+        const collapse = byType['collapse'] || 0;
+        const panic = byType['panic'] || 0;
+        const crowd = byType['overcrowding'] || 0;
+
+        if (incidentsDoughnutChart) {
+          incidentsDoughnutChart.data.datasets[0].data = [falls, collapse, panic, crowd];
+          incidentsDoughnutChart.update();
+        }
+      } catch (err) {
+        console.warn("Error fetching analytics summary:", err);
+      }
+    }
+
+    async function fetchTrendData(hours) {
+      try {
+        const res = await fetch(`/api/analytics/trends?hours=${hours}`);
+        if (!res.ok) return;
+        const items = await res.json();
+
+        if (trendChart) {
+          const labels = items.map(item => {
+            const d = new Date(item.timestamp * 1000);
+            return `${d.getHours()}:${String(d.getMinutes()).padStart(2, '0')}`;
+          });
+          const counts = items.map(item => item.total_count);
+
+          trendChart.data.labels = labels;
+          trendChart.data.datasets[0].data = counts;
+          trendChart.update();
+        }
+      } catch (err) {
+        console.warn("Error fetching trend data:", err);
+      }
+    }
+
+    function changeTrendRange(hours) {
+      currentTrendRange = hours;
+      document.querySelectorAll("#timeFilterButtons button").forEach(b => {
+        b.className = "btn-neo btn-neo-sm btn-neo-white";
+      });
+      event.target.className = "btn-neo btn-neo-sm btn-neo-yellow";
+      fetchTrendData(hours);
+    }
+
+    async function fetchZonesData() {
+      try {
+        const res = await fetch("/api/analytics/zones");
+        if (!res.ok) return;
+        const zones = await res.json();
+
+        // Update bar charts
+        const names = zones.map(z => z.name);
+        const curOccupancy = zones.map(z => z.current_occupancy);
+        const maxOccupancy = zones.map(z => z.max_occupancy);
+        const dwellTimes = zones.map(z => z.avg_dwell_seconds || 0);
+
+        if (zoneOccupancyChart) {
+          zoneOccupancyChart.data.labels = names;
+          zoneOccupancyChart.data.datasets[0].data = curOccupancy;
+          zoneOccupancyChart.data.datasets[1].data = maxOccupancy;
+          zoneOccupancyChart.update();
+        }
+
+        if (dwellTimeChart) {
+          dwellTimeChart.data.labels = names;
+          dwellTimeChart.data.datasets[0].data = dwellTimes;
+          dwellTimeChart.update();
+        }
+
+        // Render sector cards
+        renderSectorCards(zones);
+      } catch (err) {
+        console.warn("Error fetching zones data:", err);
+      }
+    }
+
+    function renderSectorCards(zones) {
+      const container = document.getElementById("sectorCardsContainer");
+      if (!container) return;
+
+      if (!zones || zones.length === 0) {
+        container.innerHTML = `<div class="col-12 text-muted fw-semibold">No security sectors defined yet. Click 'Add Sector' to create one.</div>`;
+        return;
+      }
+
+      container.innerHTML = zones.map(z => {
+        const isBreached = z.is_breached || (z.current_occupancy >= z.max_occupancy);
+        const cardBg = isBreached ? "#FFE5E5" : "var(--neo-surface)";
+        const statusBadge = isBreached 
+          ? `<span class="neo-badge badge-red font-mono">BREACHED</span>` 
+          : `<span class="neo-badge badge-lime font-mono">NORMAL</span>`;
+
+        return `
+          <div class="col-12 col-md-6 col-xl-4">
+            <div class="neo-card p-3" style="background: ${cardBg}; border-color: #000;">
+              <div class="d-flex align-items-center justify-content-between mb-2">
+                <div class="d-flex align-items-center gap-2">
+                  <span style="width: 14px; height: 14px; background: ${z.color}; border: 2px solid #000; border-radius: 3px; display: inline-block;"></span>
+                  <span class="fw-bold font-display">${z.name}</span>
+                </div>
+                ${statusBadge}
+              </div>
+              <div class="d-flex justify-content-between align-items-baseline font-mono my-2">
+                <span class="fs-4 fw-bold">${z.current_occupancy} <span class="fs-6 text-muted">/ ${z.max_occupancy} cap</span></span>
+                <span class="small text-muted">Dwell: ${z.avg_dwell_seconds || 0}s</span>
+              </div>
+              <div class="d-flex justify-content-between align-items-center mt-3 pt-2 border-top border-dark">
+                <span class="small text-muted font-mono">${z.polygon.length} Vertices</span>
+                <button class="btn-neo btn-neo-sm btn-neo-white text-danger" onclick="deleteSector('${z.id}')">
+                  <i class="bi bi-trash"></i> Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join("");
+    }
+
+    async function fetchIncidents() {
+      const tbody = document.getElementById("incidentsTableBody");
+      try {
+        const res = await fetch("/api/incidents");
+        if (!res.ok) {
+          if (tbody) tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-muted fw-semibold">No security incidents logged. All sectors nominal.</td></tr>`;
+          return;
+        }
+        const data = await res.json();
+        if (!tbody) return;
+
+        const incidents = data.incidents || [];
+        if (incidents.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-muted fw-semibold">No security incidents logged. All sectors nominal.</td></tr>`;
+          return;
+        }
+
+        tbody.innerHTML = incidents.map(inc => {
+          const type = inc.event_type || 'overcrowding';
+          let typeBadge = `<span class="neo-badge badge-yellow font-mono">CROWD</span>`;
+          if (type === 'fall') typeBadge = `<span class="neo-badge badge-red font-mono">FALL</span>`;
+          if (type === 'collapse') typeBadge = `<span class="neo-badge badge-orange font-mono">COLLAPSE</span>`;
+          if (type === 'panic') typeBadge = `<span class="neo-badge badge-pink font-mono">PANIC</span>`;
+          if (type === 'zone_breach') typeBadge = `<span class="neo-badge badge-red font-mono">SECTOR BREACH</span>`;
+
+          const ackStatus = inc.acknowledged 
+            ? `<span class="neo-badge badge-lime font-mono">ACK</span>` 
+            : `<span class="neo-badge badge-red font-mono">ACTIVE</span>`;
+
+          const ackBtn = inc.acknowledged 
+            ? `<span class="text-muted small fw-bold">Acknowledged</span>` 
+            : `<button class="btn-neo btn-neo-sm btn-neo-yellow" onclick="acknowledgeIncident('${inc.id}')">Acknowledge</button>`;
+
+          const snapUrl = inc.snapshot_url || (inc.snapshot_filename ? `/api/snapshots/${inc.snapshot_filename}` : null);
+          const snapBtn = snapUrl 
+            ? `<button class="btn-neo btn-neo-sm btn-neo-cyan" onclick="inspectSnapshot('${snapUrl}', '${inc.id}')"><i class="bi bi-image"></i> View</button>` 
+            : `<span class="text-muted small">None</span>`;
+
+          const tsDisplay = (typeof inc.timestamp === 'number') 
+            ? new Date(inc.timestamp * 1000).toLocaleString() 
+            : (inc.timestamp || new Date().toLocaleString());
+
+          return `
+            <tr>
+              <td class="font-mono fw-bold">${inc.id}</td>
+              <td>${typeBadge}</td>
+              <td class="fw-semibold">${inc.zone_name || 'General Area'}</td>
+              <td class="font-mono small">${tsDisplay}</td>
+              <td class="font-mono">${inc.confidence ? Math.round(inc.confidence * 100) + '%' : '100%'}</td>
+              <td>${snapBtn}</td>
+              <td>${ackStatus}</td>
+              <td>${ackBtn}</td>
+            </tr>
+          `;
+        }).join("");
+      } catch (err) {
+        console.warn("Error fetching incidents:", err);
+        if (tbody) tbody.innerHTML = `<tr><td colspan="8" class="text-center py-4 text-muted fw-semibold">No security incidents logged. All sectors nominal.</td></tr>`;
+      }
+    }
+
+    async function acknowledgeIncident(id) {
+      try {
+        const res = await fetch(`/api/incidents/${id}/acknowledge`, { method: "POST" });
+        if (res.ok) {
+          fetchIncidents();
+          fetchAnalyticsSummary();
+        }
+      } catch (err) {
+        console.error("Failed to acknowledge incident:", err);
+      }
+    }
+
+    function inspectSnapshot(url, id) {
+      const modal = new bootstrap.Modal(document.getElementById("snapshotModal"));
+      document.getElementById("snapshotModalImg").src = url;
+      document.getElementById("snapshotModalTitle").textContent = `Incident Photo Snapshot: ${id}`;
+      modal.show();
+    }
+
+    // =========================================================================
+    // Staged Incident Drill Simulation
+    // =========================================================================
+    function openSimulateModal() {
+      const modal = new bootstrap.Modal(document.getElementById("simulateModal"));
+      modal.show();
+    }
+
+    async function handleSimulateSubmit(e) {
+      e.preventDefault();
+      const eventType = document.getElementById("simType").value;
+      const zoneName = document.getElementById("simZone").value.trim();
+      const confidence = parseFloat(document.getElementById("simConfidence").value);
+
+      try {
+        const res = await fetch("/api/incidents/simulate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            event_type: eventType,
+            zone_name: zoneName,
+            confidence: confidence
+          })
+        });
+
+        if (res.ok) {
+          const modalEl = document.getElementById("simulateModal");
+          const modal = bootstrap.Modal.getInstance(modalEl);
+          if (modal) modal.hide();
+          fetchIncidents();
+          fetchAnalyticsSummary();
+        }
+      } catch (err) {
+        console.error("Simulation error:", err);
+      }
+    }
+
+    // =========================================================================
+    // Real-Time WebSocket Telemetry
+    // =========================================================================
+    let ws = null;
+    let wsReconnectTimeout = null;
+
+    function initWebSocket() {
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const wsUrl = `${protocol}//${window.location.host}/ws/events`;
+      const badge = document.getElementById("connectionBadge");
+
+      try {
+        ws = new WebSocket(wsUrl);
+
+        ws.onopen = () => {
+          if (badge) {
+            badge.className = "neo-badge badge-lime font-mono";
+            badge.innerHTML = `<span class="spinner-grow spinner-grow-sm me-1" style="width: 8px; height: 8px;"></span> LIVE WS`;
+          }
+          if (wsReconnectTimeout) clearTimeout(wsReconnectTimeout);
+        };
+
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            handleIncomingEvent(data);
+          } catch (e) {
+            console.warn("WS JSON parse error:", e);
+          }
+        };
+
+        ws.onclose = () => {
+          if (badge) {
+            badge.className = "neo-badge badge-yellow font-mono";
+            badge.textContent = "RECONNECTING";
+          }
+          wsReconnectTimeout = setTimeout(initWebSocket, 3000);
+        };
+
+        ws.onerror = () => {
+          if (ws) ws.close();
+        };
+      } catch (e) {
+        console.warn("WebSocket initialization error:", e);
+      }
+    }
+
+    function handleIncomingEvent(data) {
+      if (data.event_type === "telemetry") {
+        if (data.zones) {
+          renderSectorCards(data.zones);
+          const names = data.zones.map(z => z.name);
+          const occs = data.zones.map(z => z.current_occupancy);
+          const limits = data.zones.map(z => z.max_occupancy);
+          const dwells = data.zones.map(z => z.avg_dwell_seconds || 0);
+
+          if (zoneOccupancyChart) {
+            zoneOccupancyChart.data.labels = names;
+            zoneOccupancyChart.data.datasets[0].data = occs;
+            zoneOccupancyChart.data.datasets[1].data = limits;
+            zoneOccupancyChart.update();
+          }
+          if (dwellTimeChart) {
+            dwellTimeChart.data.labels = names;
+            dwellTimeChart.data.datasets[0].data = dwells;
+            dwellTimeChart.update();
+          }
+        }
+      } else if (data.event_type === "safety_alert") {
+        triggerAlertTicker(data.incident);
+        fetchIncidents();
+        fetchAnalyticsSummary();
+      } else if (data.event_type === "zone_update") {
+        fetchZonesData();
+      }
+    }
+
+    function triggerAlertTicker(incident) {
+      const banner = document.getElementById("safetyAlertBanner");
+      const text = document.getElementById("alertBannerText");
+      if (!banner || !text) return;
+
+      const type = (incident.event_type || 'emergency').toUpperCase();
+      text.textContent = `${type} DETECTED: ${incident.zone_name || 'Active Zone'} at ${incident.timestamp}`;
+      banner.style.display = "flex";
+    }
+
+    function dismissAlertBanner() {
+      const banner = document.getElementById("safetyAlertBanner");
+      if (banner) banner.style.display = "none";
+    }
+
+    // =========================================================================
+    // Controls: Pose & Zones Toggling
+    // =========================================================================
+    async function togglePoseDetection() {
+      poseEnabled = !poseEnabled;
+      const btn = document.getElementById("togglePoseBtn");
+      try {
+        await fetch("/api/pose/toggle", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ enabled: poseEnabled })
+        });
+        if (btn) {
+          btn.innerHTML = `<i class="bi bi-person-arms-up"></i> Pose Skeletons: ${poseEnabled ? 'ON' : 'OFF'}`;
+          btn.className = poseEnabled ? "btn-neo btn-neo-cyan btn-neo-sm" : "btn-neo btn-neo-white btn-neo-sm";
+        }
+      } catch (e) {
+        console.error("Toggle pose error:", e);
+      }
+    }
+
+    async function toggleZonesOverlay() {
+      zonesEnabled = !zonesEnabled;
+      const btn = document.getElementById("toggleZonesBtn");
+      try {
+        await fetch("/api/zones/toggle", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ enabled: zonesEnabled })
+        });
+        if (btn) {
+          btn.innerHTML = `<i class="bi bi-bounding-box-circles"></i> Sectors Overlay: ${zonesEnabled ? 'ON' : 'OFF'}`;
+          btn.className = zonesEnabled ? "btn-neo btn-neo-lime btn-neo-sm" : "btn-neo btn-neo-white btn-neo-sm";
+        }
+      } catch (e) {
+        console.error("Toggle zones error:", e);
+      }
+    }
+
+    // =========================================================================
+    // Sector Management (Add / Delete)
+    // =========================================================================
+    function openSectorModal() {
+      const modal = new bootstrap.Modal(document.getElementById("sectorModal"));
+      modal.show();
+    }
+
+    async function handleSectorSubmit(e) {
+      e.preventDefault();
+      const name = document.getElementById("sectorNameInput").value.trim();
+      const color = document.getElementById("sectorColorInput").value;
+      const cap = parseInt(document.getElementById("sectorCapacityInput").value, 10);
+      const polyStr = document.getElementById("sectorPolygonInput").value.trim();
+
+      let polygon = [];
+      try {
+        polygon = JSON.parse(polyStr);
+        if (!Array.isArray(polygon) || polygon.length < 3) {
+          alert("Polygon must contain at least 3 coordinates [[x, y], ...]");
+          return;
+        }
+      } catch (err) {
+        alert("Invalid polygon JSON: " + err.message);
+        return;
+      }
+
+      const sectorId = "zone-" + name.toLowerCase().replace(/[^a-z0-9]/g, "-") + "-" + Date.now().toString().slice(-4);
+
+      try {
+        const res = await fetch("/api/zones", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": authToken ? `Bearer ${authToken}` : ""
+          },
+          body: JSON.stringify({
+            id: sectorId,
+            name: name,
+            color: color,
+            polygon: polygon,
+            max_occupancy: cap,
+            camera_id: "primary"
+          })
+        });
+
+        if (res.ok) {
+          const modalEl = document.getElementById("sectorModal");
+          const modal = bootstrap.Modal.getInstance(modalEl);
+          if (modal) modal.hide();
+          fetchZonesData();
+          fetchAnalyticsSummary();
+        } else {
+          const err = await res.json();
+          alert("Failed to save sector: " + (err.detail || "Server error"));
+        }
+      } catch (err) {
+        console.error("Save sector error:", err);
+      }
+    }
+
+    async function deleteSector(id) {
+      if (!confirm(`Are you sure you want to remove sector ${id}?`)) return;
+      try {
+        const res = await fetch(`/api/zones/${id}`, {
+          method: "DELETE",
+          headers: { "Authorization": authToken ? `Bearer ${authToken}` : "" }
+        });
+        if (res.ok) {
+          fetchZonesData();
+          fetchAnalyticsSummary();
+        }
+      } catch (err) {
+        console.error("Delete sector error:", err);
+      }
+    }
+
+    // =========================================================================
+    // Auth Login Modal & Token Management
+    // =========================================================================
+    function openAuthModal() {
+      const modal = new bootstrap.Modal(document.getElementById("authModal"));
+      modal.show();
+    }
+
+    function updateAuthUI() {
+      const label = document.getElementById("userLabel");
+      if (label) label.textContent = currentUser;
+    }
+
+    async function handleLoginSubmit(e) {
+      e.preventDefault();
+      const user = document.getElementById("authUsername").value.trim();
+      const pass = document.getElementById("authPassword").value;
+      const errBox = document.getElementById("authErrorMsg");
+
+      try {
+        const res = await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ username: user, password: pass })
+        });
+
+        if (res.ok) {
+          const data = await res.json();
+          authToken = data.access_token;
+          currentUser = `${data.username} (${data.role})`;
+          localStorage.setItem("cms_token", authToken);
+          localStorage.setItem("cms_user", currentUser);
+          updateAuthUI();
+
+          const modalEl = document.getElementById("authModal");
+          const modal = bootstrap.Modal.getInstance(modalEl);
+          if (modal) modal.hide();
+          if (errBox) errBox.style.display = "none";
+        } else {
+          const err = await res.json();
+          if (errBox) {
+            errBox.textContent = err.detail || "Invalid credentials.";
+            errBox.style.display = "block";
+          }
+        }
+      } catch (err) {
+        if (errBox) {
+          errBox.textContent = "Network error: " + err.message;
+          errBox.style.display = "block";
+        }
+      }
+    }
+  </script>
+</body>
+</html>
