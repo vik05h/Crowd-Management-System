@@ -42,6 +42,7 @@ class PrivacyManager:
         frame: np.ndarray,
         boxes: Optional[List[Tuple[int, int, int, int]]] = None,
         keypoints: Optional[List[List[Tuple[float, float, float]]]] = None,
+        in_place: bool = False,
     ) -> np.ndarray:
         """Apply Gaussian blur to face regions on the given frame.
 
@@ -49,6 +50,7 @@ class PrivacyManager:
             frame: BGR numpy image frame.
             boxes: Optional list of person bounding boxes as (x1, y1, x2, y2).
             keypoints: Optional list of 17-keypoint sets from pose estimation.
+            in_place: If True, mutates the input frame directly to avoid memory copies.
 
         Returns:
             Anonymized BGR image frame.
@@ -57,7 +59,7 @@ class PrivacyManager:
             return frame
 
         h, w = frame.shape[:2]
-        anonymized = frame.copy()
+        anonymized = frame if in_place else frame.copy()
         blurred_faces = 0
 
         # Method 1: Precise cranial keypoints from YOLO-Pose (keypoints 0..4: nose, eyes, ears)

@@ -642,29 +642,24 @@ def video_feed() -> StreamingResponse:
     def generate():
         last_sent_id = -1
         while True:
-            with yolo_infer.frame_lock:
-                current_id = yolo_infer.frame_id
-                frame_to_send = (
-                    yolo_infer.latest_frame.copy()
-                    if yolo_infer.latest_frame is not None
-                    else None
-                )
+            with yolo_infer.frame_condition:
+                while yolo_infer.frame_id == last_sent_id and yolo_infer.video_processing_active:
+                    yolo_infer.frame_condition.wait(timeout=0.1)
 
-            if frame_to_send is None or current_id == last_sent_id:
+                if not yolo_infer.video_processing_active and yolo_infer.latest_jpeg_bytes is None:
+                    break
+
+                jpeg_bytes = yolo_infer.latest_jpeg_bytes
+                last_sent_id = yolo_infer.frame_id
+
+            if jpeg_bytes is None:
                 time.sleep(0.01)
-                continue
-
-            last_sent_id = current_id
-            ret, buffer = cv2.imencode(
-                ".jpg", frame_to_send, [cv2.IMWRITE_JPEG_QUALITY, 85]
-            )
-            if not ret:
                 continue
 
             yield (
                 b"--frame\r\n"
                 b"Content-Type: image/jpeg\r\n\r\n"
-                + buffer.tobytes()
+                + jpeg_bytes
                 + b"\r\n"
             )
 

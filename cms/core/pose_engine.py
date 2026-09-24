@@ -29,7 +29,7 @@ SKELETON_CONNECTIONS = [
 class PoseEngine:
     """Ultralytics YOLO-Pose inference and heuristic behavior analyzer."""
 
-    def __init__(self, model_path: str = "yolo26n-pose.pt"):
+    def __init__(self, model_path: str = "yolo26n-pose.pt", lazy_load: bool = True):
         self.device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model_path = model_path
         self.model: Optional[YOLO] = None
@@ -39,11 +39,29 @@ class PoseEngine:
         self.cached_skeletons: List[Dict[str, Any]] = []
         self.latest_latency_ms: float = 0.0
 
-        self.load_model(self.model_path)
+        if not lazy_load:
+            self.load_model(self.model_path)
 
         # Temporal tracking state per spatial cluster / track ID
         self.person_states: Dict[str, Dict[str, Any]] = {}
         self.last_cleanup_time: float = time.time()
+
+    def ensure_model_loaded(self) -> bool:
+        """Ensure the pose model is loaded into memory, loading lazily if needed."""
+        if self.model is None:
+            return self.load_model(self.model_path)
+        return True
+
+    def unload_model(self) -> None:
+        """Unload pose model from RAM and VRAM when inactive."""
+        if self.model is not None:
+            del self.model
+            self.model = None
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            import gc
+            gc.collect()
+            print("[INFO] PoseEngine model unloaded and memory cleared.")
 
     def load_model(self, model_path: str) -> bool:
         """Dynamically load or hot-swap YOLO26 pose model weights."""
@@ -78,7 +96,10 @@ class PoseEngine:
             skeletons: List of detected person skeleton dicts (boxes, keypoints, event_state)
             events: List of new confirmed safety incident dicts (fall, collapse, panic)
         """
-        if self.model is None or frame is None:
+        if self.model is None:
+            if not self.ensure_model_loaded():
+                return [], []
+        if frame is None:
             return [], []
 
         h, w = frame.shape[:2]
@@ -138,12 +159,14 @@ class PoseEngine:
 
         res = results[0]
         if res.keypoints is None or res.boxes is None or len(res.boxes) == 0:
+            del results, res
             return [], []
 
         boxes_xyxy = res.boxes.xyxy.cpu().numpy()
         confs = res.boxes.conf.cpu().numpy()
         kpts_xy = res.keypoints.xy.cpu().numpy()  # shape [N, 17, 2]
         kpts_conf = res.keypoints.conf.cpu().numpy() if res.keypoints.conf is not None else np.ones((len(boxes_xyxy), 17))
+        del results, res
 
         skeletons: List[Dict[str, Any]] = []
         new_incidents: List[Dict[str, Any]] = []

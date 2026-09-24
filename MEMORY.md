@@ -400,3 +400,23 @@
   - Active background Uvicorn daemon running on port 8000.
   - Verified strictly zero emojis across all code, comments, templates, and documentation.
 
+## System Performance & RAM Optimization Upgrade
+- Root Cause Diagnosis:
+  - Task Manager telemetry revealed host RAM at 77% (12.1 GB / 15.7 GB) and committed virtual memory at 85% (22.9 GB / 27.0 GB pagefile) despite low GPU VRAM usage (266 MB / 6140 MB, 4.3%).
+  - Bottlenecks identified:
+    1. High transient allocation churn from `.copy()` calls across every frame in the pipeline (~280 MB/s transient allocation rate).
+    2. Full-resolution density map (1280x720 float32 = 3.7 MB) with heavy 65x65 Gaussian blur creating ~7 MB transient buffers per frame.
+    3. Dual concurrent YOLO model residency (YOLO26m detection + YOLO26n-Pose) consuming 600+ MB host RAM for framework predictor buffers.
+    4. Per-box GPU-to-CPU tensor synchronization in tracking loops calling `.cpu().numpy()` inside inner loops.
+    5. Polling copy churn in `/video_feed` creating copies even when no new frame ID arrived.
+- Performance Architecture Enhancements:
+  1. Buffer Reuse & In-Place Mutation: Replaced repeated frame buffer reallocations with `np.copyto` on pre-allocated buffers. In-place blending applied in `_apply_heatmap()` and `apply_face_blur(..., in_place=True)`. In `/video_feed`, only copy when `current_id != last_sent_id` with immediate local tensor deletion.
+  2. Quarter-Resolution Density Grid: Scaled density accumulation grid to quarter dimensions (`height // 4, width // 4` = 320x180 = ~230 KB), reducing steady-state RAM by 94% and accelerating Gaussian thermal blur by 16x.
+  3. Lazy Loading & Memory Unloading: Integrated `lazy_load=True`, `ensure_model_loaded()`, and `unload_model()` into `PoseEngine`. When pose estimation is toggled off, the model is freed from host RAM and CUDA cache is flushed. Immediate `del results` frees PyTorch tensors immediately.
+  4. Batched Bounding Box Extraction: Single batched `.cpu().numpy()` extraction for bounding boxes, confidence, class, and track IDs across `process_video()`, `detect_frame()`, and `_run_batch_processing()`.
+  5. Pacing Calibration & GC Cadence: Removed artificial sleep floors when compute duration exceeds frame budget (`frame_duration - elapsed > 0.002`). Periodic garbage collection (`gc.collect()` and CUDA cache empty) executed every 300 frames.
+  6. Magnification Cell Feature Removal: Completely removed the zoom inspection modal, viewport click listener, and background `/zoom_feed` polling from `/live_preview`, preventing accidental modal triggers and freeing streaming overhead.
+- Verification & Quality:
+  - All 37 unit, integration, and security tests passing in 8.26s with zero failures.
+  - Zero emojis across all code, comments, templates, and documentation.
+

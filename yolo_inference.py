@@ -82,6 +82,11 @@ class YOLOInference:
         self.video_processing_active: bool = False
         self.current_people_count: int = 0
         self.frame_lock = threading.Lock()
+        self.frame_condition = threading.Condition(self.frame_lock)
+        self.latest_jpeg_bytes: Optional[bytes] = None
+        self.stream_width: int = 960
+        self.stream_height: int = 540
+        self.jpeg_quality: int = 75
         self.inference_imgsz: int = 640
 
         # Overcrowding alert parameters
@@ -93,8 +98,8 @@ class YOLOInference:
         self.active_alert_triggered: bool = False
         self.alert_callbacks: List[Any] = []
 
-        # Pose Keypoint Intelligence & Behavioral Safety Engine
-        self.pose_engine = PoseEngine("yolo26n-pose.pt")
+        # Pose Keypoint Intelligence & Behavioral Safety Engine (lazy load to conserve system RAM)
+        self.pose_engine = PoseEngine("yolo26n-pose.pt", lazy_load=True)
         self.enable_pose: bool = True
         self.pose_callbacks: List[Any] = []
 
@@ -179,10 +184,32 @@ class YOLOInference:
         """Safely terminate the active video processing worker."""
         with self.video_thread_lock:
             self.video_processing_active = False
+            with self.frame_condition:
+                self.frame_condition.notify_all()
             if self.video_thread is not None and self.video_thread.is_alive():
                 self.video_thread.join(timeout=2.0)
             self.video_thread = None
             self.current_video_path = None
+
+    def _publish_frame(self, frame: np.ndarray) -> None:
+        """Encode frame to JPEG once and push to all waiting stream consumers."""
+        h, w = frame.shape[:2]
+        if w != self.stream_width or h != self.stream_height:
+            stream_img = cv2.resize(frame, (self.stream_width, self.stream_height), interpolation=cv2.INTER_LINEAR)
+        else:
+            stream_img = frame
+
+        ret, buf = cv2.imencode(".jpg", stream_img, [cv2.IMWRITE_JPEG_QUALITY, self.jpeg_quality])
+        jpeg_bytes = buf.tobytes() if ret else None
+
+        with self.frame_condition:
+            if self.latest_frame is None or self.latest_frame.shape != frame.shape:
+                self.latest_frame = frame.copy()
+            else:
+                np.copyto(self.latest_frame, frame)
+            self.latest_jpeg_bytes = jpeg_bytes
+            self.frame_id += 1
+            self.frame_condition.notify_all()
 
     def reset_tracker(self) -> None:
         """Reset internal tracker state on video rewind or restart."""
@@ -217,8 +244,12 @@ class YOLOInference:
         self.alert_callbacks.append(callback)
 
     def set_pose_enabled(self, state: bool) -> None:
-        """Toggle pose estimation overlay on or off."""
+        """Toggle pose estimation overlay on or off with automatic RAM/VRAM unloading."""
         self.enable_pose = state
+        if state:
+            self.pose_engine.ensure_model_loaded()
+        else:
+            self.pose_engine.unload_model()
         print(f"[INFO] Pose intelligence enabled: {self.enable_pose}")
 
     def set_zones_enabled(self, state: bool) -> None:
@@ -244,21 +275,27 @@ class YOLOInference:
         if p == "eco":
             self.inference_imgsz = 640
             self.use_fp16 = (self.device == "cuda")
-            self.pose_engine.load_model("yolo26n-pose.pt")
+            self.pose_engine.model_path = "yolo26n-pose.pt"
+            if self.enable_pose:
+                self.pose_engine.load_model("yolo26n-pose.pt")
             self.pose_engine.set_stride(2)
             self.pose_engine.set_fp16(self.use_fp16)
             self.hardware_profile = "eco"
         elif p == "balanced":
             self.inference_imgsz = 640
             self.use_fp16 = (self.device == "cuda")
-            self.pose_engine.load_model("yolo26s-pose.pt")
+            self.pose_engine.model_path = "yolo26s-pose.pt"
+            if self.enable_pose:
+                self.pose_engine.load_model("yolo26s-pose.pt")
             self.pose_engine.set_stride(1)
             self.pose_engine.set_fp16(self.use_fp16)
             self.hardware_profile = "balanced"
         elif p == "ultra":
             self.inference_imgsz = 1024
             self.use_fp16 = (self.device == "cuda")
-            self.pose_engine.load_model("yolo26m-pose.pt")
+            self.pose_engine.model_path = "yolo26m-pose.pt"
+            if self.enable_pose:
+                self.pose_engine.load_model("yolo26m-pose.pt")
             self.pose_engine.set_stride(1)
             self.pose_engine.set_fp16(self.use_fp16)
             self.hardware_profile = "ultra"
@@ -409,16 +446,19 @@ class YOLOInference:
         if self.density_map is None:
             return frame
 
-        blurred = cv2.GaussianBlur(self.density_map, (65, 65), 0)
+        # Gaussian blur on quarter-resolution density map (16x faster compute, ~200KB transient)
+        blurred = cv2.GaussianBlur(self.density_map, (17, 17), 0)
         max_val = float(blurred.max())
         if max_val > 1e-4:
             norm_map = np.uint8(255 * (blurred / max_val))
-            heatmap = cv2.applyColorMap(norm_map, cv2.COLORMAP_JET)
-            mask = norm_map > 15
-            annotated = frame.copy()
-            annotated[mask] = cv2.addWeighted(frame[mask], 0.45, heatmap[mask], 0.55, 0)
+            heatmap_small = cv2.applyColorMap(norm_map, cv2.COLORMAP_JET)
+            h, w = frame.shape[:2]
+            heatmap = cv2.resize(heatmap_small, (w, h), interpolation=cv2.INTER_LINEAR)
+            norm_full = cv2.resize(norm_map, (w, h), interpolation=cv2.INTER_NEAREST)
+            mask = norm_full > 15
+            # In-place blending without allocating extra frame copies
+            frame[mask] = cv2.addWeighted(frame[mask], 0.45, heatmap[mask], 0.55, 0)
             self.density_map *= 0.95
-            return annotated
 
         return frame
 
@@ -539,8 +579,9 @@ class YOLOInference:
     def detect_frame(self, frame: np.ndarray, conf: float = 0.35) -> Tuple[np.ndarray, int]:
         """Perform object detection on a single video frame with annotations."""
         height, width = frame.shape[:2]
-        if self.density_map is None or self.density_map.shape != (height, width):
-            self.density_map = np.zeros((height, width), dtype=np.float32)
+        dh, dw = max(1, height // 4), max(1, width // 4)
+        if self.density_map is None or self.density_map.shape != (dh, dw):
+            self.density_map = np.zeros((dh, dw), dtype=np.float32)
 
         use_half = (self.use_fp16 and self.device == "cuda")
         t_start = time.perf_counter()
@@ -556,10 +597,11 @@ class YOLOInference:
         raw_boxes = []
 
         for result in results:
-            if result.boxes is None:
+            if result.boxes is None or len(result.boxes) == 0:
                 continue
-            for box in result.boxes.data.cpu().numpy():
-                x1, y1, x2, y2, score, class_id = box
+            boxes_data = result.boxes.data.cpu().numpy()
+            for box in boxes_data:
+                x1, y1, x2, y2, score, class_id = box[:6]
                 if int(class_id) == 0:
                     w, h = x2 - x1, y2 - y1
                     if w < 20 or h < 35:
@@ -567,13 +609,14 @@ class YOLOInference:
                     if (x1 < 4 or x2 > width - 4) and w < 28:
                         continue
                     raw_boxes.append((int(x1), int(y1), int(x2), int(y2), float(score), None))
+        del results
 
         clean_boxes = self._nms(raw_boxes, iou_thresh=0.40)
         self.current_people_count = len(clean_boxes)
 
         for x1, y1, x2, y2, _, _ in clean_boxes:
-            cx, cy = int((x1 + x2) / 2), int((y1 + y2) / 2)
-            cv2.circle(self.density_map, (cx, cy), 35, (1.0,), thickness=-1)
+            cx, cy = int((x1 + x2) / 8), int((y1 + y2) / 8)
+            cv2.circle(self.density_map, (cx, cy), 9, (1.0,), thickness=-1)
 
         frame = self._draw_annotations(frame, clean_boxes)
 
@@ -605,6 +648,7 @@ class YOLOInference:
                 frame,
                 boxes=[(b[0], b[1], b[2], b[3]) for b in clean_boxes],
                 keypoints=kpts_list,
+                in_place=True,
             )
 
         if self.enable_heat_map:
@@ -615,10 +659,7 @@ class YOLOInference:
         # Trigger sustained alert evaluation
         self.check_and_trigger_alert(frame, self.current_people_count)
 
-        with self.frame_lock:
-            self.latest_frame = frame.copy()
-            self.frame_id += 1
-
+        self._publish_frame(frame)
         return frame, self.current_people_count
 
     def process_video(self, input_path: str, output_path: str, loop: bool = True) -> None:
@@ -638,9 +679,13 @@ class YOLOInference:
             fps = 25.0
 
         frame_duration = 1.0 / fps if fps > 0 else 0.04
-        self.density_map = np.zeros((height, width), dtype=np.float32)
-        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-        out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+        dh, dw = max(1, height // 4), max(1, width // 4)
+        self.density_map = np.zeros((dh, dw), dtype=np.float32)
+        save_to_disk = (not loop) and bool(output_path)
+        out = None
+        if save_to_disk:
+            fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+            out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
 
         while self.video_processing_active:
             loop_start = time.time()
@@ -669,21 +714,25 @@ class YOLOInference:
                         verbose=False,
                     )
                 for res in track_results:
-                    if res.boxes is None:
+                    if res.boxes is None or len(res.boxes) == 0:
                         continue
-                    for i, b in enumerate(res.boxes):
-                        cls_id = int(b.cls[0].cpu().numpy())
-                        if cls_id == 0:
-                            coords = b.xyxy[0].cpu().numpy()
-                            score = float(b.conf[0].cpu().numpy())
-                            tid = int(b.id[0].cpu().numpy()) if b.id is not None else None
-                            x1, y1, x2, y2 = coords
+                    coords_np = res.boxes.xyxy.cpu().numpy()
+                    confs_np = res.boxes.conf.cpu().numpy()
+                    clses_np = res.boxes.cls.cpu().numpy().astype(int)
+                    ids_np = res.boxes.id.cpu().numpy().astype(int) if res.boxes.id is not None else None
+
+                    for i in range(len(coords_np)):
+                        if clses_np[i] == 0:
+                            x1, y1, x2, y2 = coords_np[i]
                             w, h = x2 - x1, y2 - y1
                             if w < 20 or h < 35:
                                 continue
                             if (x1 < 4 or x2 > width - 4) and w < 28:
                                 continue
+                            score = float(confs_np[i])
+                            tid = int(ids_np[i]) if ids_np is not None else None
                             raw_boxes.append((int(x1), int(y1), int(x2), int(y2), score, tid))
+                del track_results
             except Exception:
                 # Fallback to standard inference if tracking encounters an error
                 with torch.inference_mode():
@@ -703,15 +752,16 @@ class YOLOInference:
                         if (x1 < 4 or x2 > width - 4) and w < 28:
                             continue
                         raw_boxes.append((int(x1), int(y1), int(x2), int(y2), float(score), None))
+                del res
 
             self.detection_latency_ms = (time.perf_counter() - t_det) * 1000.0
             clean_boxes = self._nms(raw_boxes, iou_thresh=0.40)
             self.current_people_count = len(clean_boxes)
 
-            # Update density points
+            # Update density points on quarter-resolution grid
             for x1, y1, x2, y2, _, _ in clean_boxes:
-                cx, cy = int((x1 + x2) / 2), int((y1 + y2) / 2)
-                cv2.circle(self.density_map, (cx, cy), 35, (1.0,), thickness=-1)
+                cx, cy = int((x1 + x2) / 8), int((y1 + y2) / 8)
+                cv2.circle(self.density_map, (cx, cy), 9, (1.0,), thickness=-1)
 
             # Draw unified sleek annotations
             frame = self._draw_annotations(frame, clean_boxes)
@@ -795,21 +845,30 @@ class YOLOInference:
                     frame,
                     boxes=[(b[0], b[1], b[2], b[3]) for b in clean_boxes],
                     keypoints=kpts_list,
+                    in_place=True,
                 )
 
-            out.write(frame)
-            with self.frame_lock:
-                self.latest_frame = frame.copy()
-                self.frame_id += 1
+            if out is not None:
+                out.write(frame)
+
+            self._publish_frame(frame)
 
             elapsed = time.time() - loop_start
             if elapsed > 0:
                 self.fps_telemetry = (self.fps_telemetry * 0.85) + ((1.0 / elapsed) * 0.15)
-            sleep_time = max(0.001, frame_duration - elapsed)
-            time.sleep(sleep_time)
+            sleep_time = frame_duration - elapsed
+            if sleep_time > 0.002:
+                time.sleep(sleep_time)
+
+            if self.frame_id % 300 == 0:
+                import gc
+                gc.collect()
+                if self.device == "cuda":
+                    torch.cuda.empty_cache()
 
         cap.release()
-        out.release()
+        if out is not None:
+            out.release()
         self.video_processing_active = False
         print(f"[INFO] Video processing finished: {output_path}")
 
@@ -906,21 +965,25 @@ class YOLOInference:
                             verbose=False,
                         )
                     for res in track_results:
-                        if res.boxes is None:
+                        if res.boxes is None or len(res.boxes) == 0:
                             continue
-                        for i, b in enumerate(res.boxes):
-                            cls_id = int(b.cls[0].cpu().numpy())
-                            if cls_id == 0:
-                                coords = b.xyxy[0].cpu().numpy()
-                                score = float(b.conf[0].cpu().numpy())
-                                tid = int(b.id[0].cpu().numpy()) if b.id is not None else None
-                                x1, y1, x2, y2 = coords
+                        coords_np = res.boxes.xyxy.cpu().numpy()
+                        confs_np = res.boxes.conf.cpu().numpy()
+                        clses_np = res.boxes.cls.cpu().numpy().astype(int)
+                        ids_np = res.boxes.id.cpu().numpy().astype(int) if res.boxes.id is not None else None
+
+                        for i in range(len(coords_np)):
+                            if clses_np[i] == 0:
+                                x1, y1, x2, y2 = coords_np[i]
                                 w, h = x2 - x1, y2 - y1
                                 if w < 20 or h < 35:
                                     continue
                                 if (x1 < 4 or x2 > width - 4) and w < 28:
                                     continue
+                                score = float(confs_np[i])
+                                tid = int(ids_np[i]) if ids_np is not None else None
                                 raw_boxes.append((int(x1), int(y1), int(x2), int(y2), score, tid))
+                    del track_results
                 except Exception:
                     with torch.inference_mode():
                         res = self.model(frame, conf=0.35, imgsz=self.inference_imgsz, verbose=False)
@@ -933,6 +996,7 @@ class YOLOInference:
                             if (x1 < 4 or x2 > width - 4) and w < 28:
                                 continue
                             raw_boxes.append((int(x1), int(y1), int(x2), int(y2), float(score), None))
+                    del res
 
                 clean_boxes = self._nms(raw_boxes, iou_thresh=0.40)
                 count = len(clean_boxes)
@@ -953,13 +1017,17 @@ class YOLOInference:
                     annotated_frame = self.privacy_manager.apply_face_blur(
                         annotated_frame,
                         boxes=[(b[0], b[1], b[2], b[3]) for b in clean_boxes],
+                        in_place=True,
                     )
 
                 out.write(annotated_frame)
 
-                # Update live streaming frame for frontend monitor
+                # Update live streaming frame for frontend monitor with buffer reuse
                 with self.batch_frame_lock:
-                    self.batch_latest_frame = annotated_frame.copy()
+                    if self.batch_latest_frame is None or self.batch_latest_frame.shape != annotated_frame.shape:
+                        self.batch_latest_frame = annotated_frame.copy()
+                    else:
+                        np.copyto(self.batch_latest_frame, annotated_frame)
                     self.batch_frame_id += 1
 
                 # Update progress

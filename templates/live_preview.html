@@ -479,7 +479,7 @@
       display: flex;
       align-items: center;
       justify-content: center;
-      cursor: crosshair;
+      cursor: default;
       overflow: hidden;
       aspect-ratio: 16 / 9;
       max-height: 64vh;
@@ -928,7 +928,7 @@
         </div>
         <div class="d-flex align-items-center gap-3 font-mono small text-black fw-bold">
           <span class="d-none d-md-inline"><i class="bi bi-bounding-box me-1"></i>ByteTrack Persist</span>
-          <span><i class="bi bi-cursor me-1"></i>Click Area to Magnify</span>
+          <span><i class="bi bi-broadcast me-1"></i>Live Surveillance</span>
         </div>
       </div>
 
@@ -1050,17 +1050,6 @@
           </div>
         </div>
       </div>
-    </div>
-  </div>
-
-  <!-- Magnified Cell Zoom Modal -->
-  <div id="zoomModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h2 class="modal-title"><i class="bi bi-zoom-in me-2"></i>Magnified Cell Inspection</h2>
-        <button class="close" id="modalClose">&times;</button>
-      </div>
-      <img src="{{ url_for('zoom_feed') }}" alt="Zoomed Coordinate Cell" id="zoomedImg" />
     </div>
   </div>
 
@@ -1250,59 +1239,13 @@
   </div>
 
   <script>
-    // Grid coordinate configuration
-    const gridRows = 6;
-    const gridCols = 6;
-    const actualWidth = 1280;
-    const actualHeight = 720;
-
     // DOM Elements
     const mainFeed = document.getElementById("mainFeed");
-    const modal = document.getElementById("zoomModal");
-    const modalClose = document.getElementById("modalClose");
     const infoPanel = document.getElementById("infoPanel");
 
     // Toggle info panel
     function toggleInfoPanel() {
       infoPanel.classList.toggle('expanded');
-    }
-
-    // Grid Cell Magnification Handler
-    mainFeed.addEventListener("click", function(event) {
-      const rect = mainFeed.getBoundingClientRect();
-      const clickX = event.clientX - rect.left;
-      const clickY = event.clientY - rect.top;
-
-      const ratioX = actualWidth / rect.width;
-      const ratioY = actualHeight / rect.height;
-
-      const realX = clickX * ratioX;
-      const realY = clickY * ratioY;
-
-      const cellW = actualWidth / gridCols;
-      const cellH = actualHeight / gridRows;
-
-      const col = Math.floor(realX / cellW);
-      const row = Math.floor(realY / cellH);
-
-      fetch(`/set_zoom?row=${row}&col=${col}`)
-        .then(response => {
-          modal.style.display = "block";
-        })
-        .catch(error => {
-          console.error("Error setting zoom cell:", error);
-        });
-    });
-
-    // Modal Close Handlers
-    modalClose.onclick = closeModal;
-    window.onclick = function(event) {
-      if (event.target === modal) closeModal();
-    };
-
-    function closeModal() {
-      modal.style.display = "none";
-      fetch(`/set_zoom?row=-1&col=-1`);
     }
 
     // =========================================================================
