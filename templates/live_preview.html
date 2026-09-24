@@ -2,79 +2,228 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Live Camera Feed | Crowd Management System</title>
+  <title>Live Camera Surveillance | Crowd Management System</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  
   <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <!-- Bootstrap Icons -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
-  <!-- GSAP -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
+
   <style>
+    /* ==========================================================================
+       Neo-Brutalism UI Design Tokens
+       Reference: https://neo-brutalism-ui-library.vercel.app/overview
+       ========================================================================== */
+    :root {
+      --neo-bg: #FAF7F2;
+      --neo-surface: #FFFFFF;
+      --neo-black: #000000;
+      --neo-yellow: #FFE500;
+      --neo-cyan: #A6FAFF;
+      --neo-lime: #B8FF9F;
+      --neo-pink: #FFA6F6;
+      --neo-orange: #FFC29F;
+      --neo-red: #FF9F9F;
+      --neo-shadow: 4px 4px 0px #000000;
+      --neo-shadow-lg: 6px 6px 0px #000000;
+      --neo-shadow-xl: 8px 8px 0px #000000;
+      --font-display: 'Space Grotesk', -apple-system, sans-serif;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+    }
+
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
-    :root {
-      --bg-dark: #0b0f17;
-      --card-bg: #131b2a;
-      --card-border: #1e293b;
-      --text-main: #f1f5f9;
-      --text-muted: #94a3b8;
-      --accent-emerald: #10b981;
-      --accent-cyan: #06b6d4;
-      --accent-amber: #f59e0b;
-      --accent-rose: #ef4444;
-      --accent-blue: #3b82f6;
-    }
+
     body {
-      background: var(--bg-dark);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      color: var(--text-main);
+      background: var(--neo-bg);
+      font-family: var(--font-sans);
+      color: var(--neo-black);
       min-height: 100vh;
+      display: flex;
+      flex-direction: column;
       overflow-x: hidden;
+      overflow-y: auto;
+      background-image: radial-gradient(var(--neo-black) 1px, transparent 1px);
+      background-size: 24px 24px;
     }
 
-    /* Command Navigation */
+    .font-mono { font-family: var(--font-mono); }
+    .font-display { font-family: var(--font-display); }
+
+    /* getlayers.ai Fluid Follower Cursor */
+    @media (pointer: fine) {
+      .layers-cursor-dot {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 8px;
+        height: 8px;
+        background-color: var(--neo-black);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 99999;
+        transform: translate(-50%, -50%);
+      }
+      .layers-cursor-follower {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 36px;
+        height: 36px;
+        border: 2px solid var(--neo-black);
+        background: rgba(255, 229, 0, 0.4);
+        border-radius: 50%;
+        box-shadow: 2px 2px 0px var(--neo-black);
+        pointer-events: none;
+        z-index: 99998;
+        transform: translate(-50%, -50%);
+        transition: width 0.25s ease, height 0.25s ease;
+      }
+      .layers-cursor-follower.hovering {
+        width: 60px;
+        height: 60px;
+        background: rgba(166, 250, 255, 0.55);
+        border-color: var(--neo-black);
+        box-shadow: 4px 4px 0px var(--neo-black);
+      }
+    }
+    @media (pointer: coarse) {
+      .layers-cursor-dot, .layers-cursor-follower { display: none !important; }
+    }
+
+    /* Neo-Brutalism Button System with Tactile Feedback */
+    .btn-neo, .btn-liquid-metal, .toggle-btn {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.55rem 1.25rem;
+      border: 2px solid var(--neo-black);
+      border-radius: 8px;
+      background: var(--neo-surface);
+      color: var(--neo-black);
+      font-weight: 700;
+      font-size: 0.88rem;
+      font-family: var(--font-sans);
+      text-decoration: none;
+      box-shadow: 3px 3px 0px var(--neo-black);
+      cursor: pointer;
+      overflow: hidden;
+      transition: transform 0.12s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.12s cubic-bezier(0.2, 0, 0, 1), background-color 0.15s ease;
+      user-select: none;
+      white-space: nowrap;
+    }
+    .btn-neo:hover, .btn-liquid-metal:hover, .toggle-btn:hover {
+      transform: translate(-1px, -1px);
+      box-shadow: 4px 4px 0px var(--neo-black);
+      color: var(--neo-black);
+    }
+    .btn-neo:active, .btn-liquid-metal:active, .toggle-btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: 0px 0px 0px var(--neo-black);
+    }
+
+    /* Active Variants */
+    .toggle-btn.btn-active-red {
+      background: var(--neo-red) !important;
+      color: var(--neo-black) !important;
+      border-color: var(--neo-black) !important;
+    }
+    .toggle-btn.btn-active-cyan {
+      background: var(--neo-cyan) !important;
+      color: var(--neo-black) !important;
+      border-color: var(--neo-black) !important;
+    }
+
+    /* Kit Langton Rolling Number Reels */
+    .rolling-number-wrap {
+      display: inline-flex;
+      align-items: flex-start;
+      overflow: hidden;
+      height: 1.25em;
+      line-height: 1.25em;
+      vertical-align: -0.15em;
+      font-variant-numeric: tabular-nums;
+      font-family: var(--font-mono);
+      font-weight: 800;
+      color: var(--neo-black);
+    }
+    .rolling-digit-reel {
+      display: inline-flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      height: 12.5em;
+      transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+      will-change: transform;
+    }
+    .rolling-digit {
+      height: 1.25em;
+      line-height: 1.25em;
+      text-align: center;
+      flex-shrink: 0;
+      display: block;
+    }
+    .rolling-char {
+      height: 1.25em;
+      line-height: 1.25em;
+      text-align: center;
+      flex-shrink: 0;
+      display: block;
+      padding: 0 0.04em;
+    }
+
+    /* Top Command Navigation */
     .command-nav {
-      background: #0f172a;
-      border-bottom: 1px solid var(--card-border);
-      padding: 0.75rem 1.5rem;
-      margin-bottom: 0.75rem;
+      background: var(--neo-surface);
+      border-bottom: 4px solid var(--neo-black);
+      padding: 0.85rem 1.5rem;
+      flex-shrink: 0;
     }
     .brand-title {
-      font-weight: 700;
-      font-size: 1.15rem;
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 1.2rem;
       letter-spacing: -0.02em;
-      color: #ffffff;
+      color: var(--neo-black);
       display: flex;
       align-items: center;
       gap: 0.5rem;
       text-decoration: none;
     }
     .brand-badge {
-      font-size: 0.65rem;
-      font-weight: 600;
-      padding: 0.2rem 0.45rem;
-      border-radius: 4px;
-      background: rgba(16, 185, 129, 0.15);
-      color: var(--accent-emerald);
-      border: 1px solid rgba(16, 185, 129, 0.3);
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      background: var(--neo-lime);
+      color: var(--neo-black);
+      border: 2px solid var(--neo-black);
+      box-shadow: 2px 2px 0px var(--neo-black);
       text-transform: uppercase;
-      letter-spacing: 0.05em;
     }
     .nav-links {
       display: flex;
-      gap: 0.75rem;
+      gap: 0.65rem;
       align-items: center;
     }
     .nav-btn {
-      color: var(--text-muted);
+      color: var(--neo-black);
       text-decoration: none;
       font-size: 0.88rem;
-      font-weight: 500;
-      padding: 0.4rem 0.8rem;
+      font-weight: 700;
+      padding: 0.45rem 0.85rem;
+      border: 2px solid transparent;
       border-radius: 6px;
       transition: all 0.15s ease;
       display: flex;
@@ -82,198 +231,319 @@
       gap: 0.4rem;
     }
     .nav-btn:hover {
-      color: #ffffff;
-      background: rgba(255, 255, 255, 0.05);
+      background: var(--neo-yellow);
+      border-color: var(--neo-black);
+      box-shadow: 2px 2px 0px var(--neo-black);
+      transform: translate(-1px, -1px);
+      color: var(--neo-black);
     }
     .nav-btn.active {
-      color: #ffffff;
-      background: #1e293b;
-      border: 1px solid #334155;
+      color: var(--neo-black);
+      background: var(--neo-yellow);
+      border: 2px solid var(--neo-black);
+      box-shadow: 2px 2px 0px var(--neo-black);
     }
 
-    /* Compact Header */
-    .page-header {
-      text-align: center;
-      padding: 0.5rem 0 0.5rem 0;
-      opacity: 0;
-    }
-    .page-title {
-      font-size: 1.6rem;
-      font-weight: 700;
-      color: #ffffff;
-      margin-bottom: 0.2rem;
-    }
-    .page-subtitle {
-      font-size: 0.85rem;
-      color: var(--text-muted);
-      font-weight: 400;
-    }
-
-    /* Main Container - Optimized for viewport */
+    /* Main Container */
     .live-container {
-      max-width: 1400px;
+      max-width: 1440px;
+      width: 100%;
       margin: 0 auto;
-      padding: 0 15px;
-      height: 100vh;
+      padding: 1.5rem 1.5rem 3rem 1.5rem;
+      flex: 1;
       display: flex;
       flex-direction: column;
+      gap: 1.25rem;
     }
 
-    /* Compact Stats Bar */
-    .stats-bar {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
-      border-radius: 0.75rem;
-      padding: 0.75rem;
-      margin-bottom: 0.75rem;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-      opacity: 0;
-      flex-shrink: 0;
+    /* Top Page Header */
+    .cctv-header {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.85rem;
+      padding-bottom: 0.85rem;
+      border-bottom: 3px solid var(--neo-black);
     }
-    .stat-item {
-      text-align: center;
-      padding: 0.25rem;
+    .page-title {
+      font-family: var(--font-display);
+      font-size: 1.7rem;
+      font-weight: 800;
+      color: var(--neo-black);
+      margin: 0;
+      letter-spacing: -0.02em;
     }
-    .stat-number {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: var(--accent-cyan);
-      display: block;
-      line-height: 1.2;
+
+    /* Pulse Dot */
+    .pulse-dot-green {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--neo-black);
+      display: inline-block;
+      animation: greenPulse 1.8s infinite ease-in-out;
     }
-    .stat-label {
-      font-size: 0.72rem;
-      color: var(--text-muted);
+    @keyframes greenPulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.3); opacity: 0.4; }
+    }
+
+    /* 4-Card Telemetry Stats Bar */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 1rem;
+    }
+    @media (max-width: 992px) {
+      .stats-grid { grid-template-columns: repeat(2, 1fr); }
+    }
+    @media (max-width: 576px) {
+      .stats-grid { grid-template-columns: 1fr; }
+    }
+
+    .telemetry-card {
+      background: var(--neo-surface);
+      border: 3px solid var(--neo-black);
+      border-radius: 12px;
+      padding: 1rem 1.25rem;
+      box-shadow: var(--neo-shadow-lg);
+      position: relative;
+      overflow: hidden;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .telemetry-card:hover {
+      transform: translate(-2px, -2px);
+      box-shadow: var(--neo-shadow-xl);
+    }
+
+    .telemetry-card-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 0.5rem;
+    }
+    .telemetry-label {
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 800;
+      color: var(--neo-black);
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
-
-    /* Main Content Area - Flexible */
-    .main-content {
-      flex: 1;
+    .telemetry-value-wrap {
       display: flex;
-      flex-direction: column;
-      min-height: 0;
+      align-items: baseline;
+      gap: 0.4rem;
+    }
+    .telemetry-number {
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--neo-black);
+      line-height: 1.1;
+      font-family: var(--font-mono);
+    }
+    .telemetry-subtext {
+      font-size: 0.76rem;
+      color: #555555;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      margin-top: 0.3rem;
     }
 
-    /* Stream Container - Responsive height */
-    .stream-container {
+    /* Density Badges */
+    .density-pill {
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      font-weight: 800;
+      padding: 0.25rem 0.75rem;
+      border-radius: 6px;
+      display: inline-block;
+      text-transform: uppercase;
+      border: 2px solid var(--neo-black);
+      box-shadow: 2px 2px 0px var(--neo-black);
+    }
+    .density-low { background: var(--neo-lime); color: var(--neo-black); }
+    .density-medium { background: var(--neo-cyan); color: var(--neo-black); }
+    .density-high { background: var(--neo-yellow); color: var(--neo-black); }
+    .density-critical {
+      background: var(--neo-red);
+      color: var(--neo-black);
+      animation: alertPulse 1.4s infinite;
+    }
+
+    @keyframes alertPulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    /* Security Alert Banner */
+    .alert-banner {
+      background: var(--neo-red);
+      border: 3px solid var(--neo-black);
+      border-radius: 10px;
+      padding: 1rem 1.35rem;
+      box-shadow: var(--neo-shadow-lg);
+      color: var(--neo-black);
+    }
+
+    /* Stream Card & Viewport */
+    .stream-card {
+      background: var(--neo-surface);
+      border: 3px solid var(--neo-black);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: var(--neo-shadow-xl);
       position: relative;
-      background: #05080f;
-      border: 1px solid var(--card-border);
-      padding: 0.5rem;
-      border-radius: 1rem;
-      box-shadow: 0 6px 30px rgba(0, 0, 0, 0.4);
-      margin-bottom: 0.75rem;
-      transition: border-color 0.3s ease;
-      cursor: pointer;
-      opacity: 0;
-      flex: 1;
+    }
+    .stream-card.alert-active {
+      border-color: var(--neo-black) !important;
+      box-shadow: 10px 10px 0px var(--neo-red) !important;
+    }
+    .stream-topbar {
+      background: var(--neo-yellow);
+      border-bottom: 3px solid var(--neo-black);
+      padding: 0.75rem 1.25rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+    .stream-viewport {
+      position: relative;
+      background: #000000;
       display: flex;
       align-items: center;
       justify-content: center;
-      min-height: 300px;
-    }
-    .stream-container:hover {
-      border-color: #3b82f6;
-    }
-    .stream-container img {
-      width: 100%;
-      height: auto;
-      max-height: 100%;
-      object-fit: contain;
-      border-radius: 0.75rem;
-      border: 1px solid #1e293b;
-    }
-
-    /* Compact Controls */
-    .controls-section {
-      text-align: center;
-      margin-bottom: 1rem;
-      opacity: 0;
-      flex-shrink: 0;
-    }
-    .toggle-btn {
-      padding: 0.6rem 1.5rem;
-      background: linear-gradient(135deg, #007bff, #0056b3);
-      color: white;
-      border: none;
-      border-radius: 0.5rem;
-      font-size: 0.95rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: transform 0.2s ease, box-shadow 0.2s ease;
-      box-shadow: 0 3px 12px rgba(0, 123, 255, 0.25);
-      margin: 0 0.4rem;
-    }
-    .toggle-btn:hover {
-      transform: translateY(-1px);
-      box-shadow: 0 4px 15px rgba(0, 123, 255, 0.35);
-    }
-    .toggle-btn:active {
-      transform: scale(0.98);
-    }
-    .btn-secondary {
-      background: linear-gradient(135deg, #6c757d, #495057);
-      box-shadow: 0 3px 12px rgba(108, 117, 125, 0.25);
-    }
-
-    /* FIXED: Full-width Info Panel */
-    .info-panel {
-      background: linear-gradient(135deg, #28a745, #20c997);
-      color: white;
-      border-radius: 12px;
-      margin: 0 -15px 0 -15px; /* Extend beyond container padding */
-      padding: 0;
-      opacity: 0;
+      cursor: crosshair;
       overflow: hidden;
-      transition: max-height 0.3s ease;
-      flex-shrink: 0;
-      position: relative;
-      width: calc(100% + 30px); /* Account for negative margins */
+      aspect-ratio: 16 / 9;
+      max-height: 64vh;
+      width: 100%;
+      margin: 0 auto;
     }
-    
-    /* FIXED: Proper header styling */
+    .stream-viewport img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+      display: block;
+    }
+
+    /* Tactical Command Bar */
+    .command-bar {
+      background: var(--neo-surface);
+      border: 3px solid var(--neo-black);
+      border-radius: 12px;
+      padding: 0.95rem 1.35rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.85rem;
+      box-shadow: var(--neo-shadow-lg);
+    }
+    .command-cluster {
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    /* Custom Range Slider */
+    .threshold-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.65rem;
+      background: var(--neo-bg);
+      border: 2px solid var(--neo-black);
+      padding: 0.4rem 0.9rem;
+      border-radius: 8px;
+      box-shadow: 2px 2px 0px var(--neo-black);
+      font-weight: 700;
+    }
+    .custom-slider {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 110px;
+      height: 8px;
+      border-radius: 4px;
+      border: 2px solid var(--neo-black);
+      background: var(--neo-surface);
+      outline: none;
+      cursor: pointer;
+    }
+    .custom-slider::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 4px;
+      background: var(--neo-yellow);
+      border: 2px solid var(--neo-black);
+      box-shadow: 2px 2px 0px var(--neo-black);
+      cursor: pointer;
+      transition: transform 0.15s ease;
+    }
+    .custom-slider::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+    }
+
+    /* Info Accordion */
+    .info-panel {
+      background: var(--neo-surface);
+      border: 3px solid var(--neo-black);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: var(--neo-shadow-lg);
+    }
     .info-header {
-      padding: 1rem 2rem;
+      padding: 1rem 1.5rem;
       cursor: pointer;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      background: rgba(0,0,0,0.1);
-      font-weight: 600;
-      font-size: 1rem;
+      background: var(--neo-surface);
+      font-weight: 800;
+      font-size: 0.95rem;
       border: none;
       width: 100%;
+      color: var(--neo-black);
+      user-select: none;
     }
     .info-header:hover {
-      background: rgba(0,0,0,0.15);
+      background: var(--neo-bg);
     }
-    
-    /* FIXED: Content area with proper padding */
     .info-content {
       padding: 0;
       max-height: 0;
       overflow: hidden;
       transition: max-height 0.3s ease, padding 0.3s ease;
+      background: var(--neo-bg);
+      border-top: 3px solid var(--neo-black);
     }
     .info-panel.expanded .info-content {
-      max-height: 200px;
-      padding: 1.5rem 2rem;
+      max-height: 300px;
+      padding: 1.25rem 1.5rem;
     }
-    
-    /* FIXED: Better content layout */
     .info-grid {
       display: grid;
       grid-template-columns: 1fr 1fr;
       gap: 2rem;
     }
+    @media (max-width: 768px) {
+      .info-grid { grid-template-columns: 1fr; gap: 1rem; }
+    }
     .info-section h6 {
-      font-size: 1rem;
-      font-weight: 600;
-      margin-bottom: 0.75rem;
+      font-size: 0.95rem;
+      font-weight: 800;
+      margin-bottom: 0.65rem;
       display: flex;
       align-items: center;
+      color: var(--neo-black);
+      font-family: var(--font-display);
     }
     .info-list {
       list-style: none;
@@ -281,28 +551,29 @@
       margin: 0;
     }
     .info-list li {
-      padding: 0.4rem 0;
+      padding: 0.3rem 0;
       display: flex;
       align-items: center;
-      font-size: 0.9rem;
+      font-size: 0.88rem;
       line-height: 1.4;
+      color: #333333;
+      font-weight: 500;
     }
     .info-list i {
-      margin-right: 0.75rem;
-      width: 18px;
-      color: rgba(255,255,255,0.9);
+      margin-right: 0.65rem;
+      width: 16px;
+      color: var(--neo-black);
     }
-    
-    /* FIXED: Expand icon animation */
     .expand-icon {
       transition: transform 0.3s ease;
       font-size: 1.2rem;
+      color: var(--neo-black);
     }
     .info-panel.expanded .expand-icon {
       transform: rotate(180deg);
     }
 
-    /* Modal Styles - Optimized */
+    /* Modal Styles */
     .modal {
       display: none;
       position: fixed;
@@ -311,27 +582,21 @@
       top: 0;
       width: 100%;
       height: 100%;
-      background-color: rgba(0, 0, 0, 0.7);
-      backdrop-filter: blur(5px);
+      background-color: rgba(0, 0, 0, 0.6);
     }
     .modal-content {
-      background: white;
-      margin: 2% auto;
+      background: var(--neo-surface);
+      color: var(--neo-black);
+      border: 3px solid var(--neo-black);
+      margin: 4% auto;
       padding: 1.5rem;
-      border-radius: 1rem;
+      border-radius: 12px;
       width: 90%;
-      max-width: 600px;
+      max-width: 620px;
       max-height: 90vh;
       position: relative;
-      box-shadow: 0 15px 50px rgba(0, 0, 0, 0.3);
-      transform: scale(0.7);
-      opacity: 0;
-      transition: all 0.3s ease;
+      box-shadow: var(--neo-shadow-xl);
       overflow-y: auto;
-    }
-    .modal.show .modal-content {
-      transform: scale(1);
-      opacity: 1;
     }
     .modal-header {
       display: flex;
@@ -339,117 +604,53 @@
       align-items: center;
       margin-bottom: 1rem;
       padding-bottom: 0.75rem;
-      border-bottom: 2px solid #f8f9fa;
+      border-bottom: 2px solid var(--neo-black);
     }
     .modal-title {
-      font-size: 1.25rem;
-      font-weight: 600;
-      color: #102a43;
+      font-family: var(--font-display);
+      font-size: 1.2rem;
+      font-weight: 800;
+      color: var(--neo-black);
       margin: 0;
     }
     .close {
-      background: #dc3545;
-      color: white;
-      border: none;
-      border-radius: 50%;
-      width: 35px;
-      height: 35px;
-      font-size: 1.1rem;
+      background: var(--neo-red);
+      color: var(--neo-black);
+      border: 2px solid var(--neo-black);
+      border-radius: 6px;
+      width: 32px;
+      height: 32px;
+      font-size: 1.2rem;
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      justify-content: center;
       cursor: pointer;
-      transition: transform 0.2s ease;
+      box-shadow: 2px 2px 0px var(--neo-black);
+      transition: all 0.15s ease;
     }
     .close:hover {
-      transform: scale(1.1);
-      background: #c82333;
+      transform: translate(-1px, -1px);
+      box-shadow: 3px 3px 0px var(--neo-black);
     }
     .modal-content img {
       width: 100%;
-      border-radius: 0.75rem;
-      border: 2px solid #e9ecef;
-    }
-
-    /* Responsive Design */
-    @media (max-width: 768px) {
-      .page-title {
-        font-size: 1.5rem;
-      }
-      .stat-number {
-        font-size: 1.25rem;
-      }
-      .stat-label {
-        font-size: 0.7rem;
-      }
-      .toggle-btn {
-        padding: 0.5rem 1.2rem;
-        font-size: 0.9rem;
-        margin: 0.2rem;
-      }
-      .stream-container {
-        min-height: 250px;
-      }
-      .info-grid {
-        grid-template-columns: 1fr;
-        gap: 1.5rem;
-      }
-      .info-header {
-        padding: 0.75rem 1rem;
-        font-size: 0.9rem;
-      }
-      .info-panel.expanded .info-content {
-        padding: 1rem;
-      }
-    }
-
-    @media (max-height: 700px) {
-      .page-header {
-        padding: 0.5rem 0 0.25rem 0;
-      }
-      .stats-bar {
-        padding: 0.5rem;
-        margin-bottom: 0.75rem;
-      }
-      .stream-container {
-        min-height: 200px;
-      }
-    }
-
-    /* Security Alert Banner */
-    .alert-banner {
-      background: linear-gradient(135deg, #b91c1c, #dc2626);
-      color: white;
-      border-radius: 0.75rem;
-      padding: 0.85rem 1.25rem;
-      margin-bottom: 0.75rem;
-      box-shadow: 0 4px 20px rgba(220, 38, 38, 0.4);
-      animation: alertPulse 1.4s infinite;
-      z-index: 100;
-      flex-shrink: 0;
-    }
-    @keyframes alertPulse {
-      0%, 100% { box-shadow: 0 0 15px rgba(185, 28, 28, 0.6); }
-      50% { box-shadow: 0 0 30px rgba(239, 68, 68, 0.9); }
-    }
-    .stream-alert-border {
-      border: 3px solid #dc2626 !important;
-      animation: borderFlash 1s infinite alternate;
-    }
-    @keyframes borderFlash {
-      from { border-color: #dc2626; }
-      to { border-color: #f59e0b; }
+      border-radius: 8px;
+      border: 2px solid var(--neo-black);
     }
 
     /* Incident Drawer */
     .incident-drawer {
       position: fixed;
       top: 0;
-      right: -450px;
-      width: 420px;
+      right: -460px;
+      width: 440px;
       height: 100vh;
-      background: #0f172a;
-      border-left: 1px solid var(--card-border);
-      box-shadow: -5px 0 30px rgba(0, 0, 0, 0.6);
+      background: var(--neo-surface);
+      border-left: 4px solid var(--neo-black);
+      box-shadow: -8px 0px 0px var(--neo-black);
       z-index: 10000;
-      transition: right 0.35s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: right 0.3s cubic-bezier(0.16, 1, 0.3, 1);
       display: flex;
       flex-direction: column;
     }
@@ -457,10 +658,10 @@
       right: 0;
     }
     .incident-drawer-header {
-      padding: 1.1rem 1.25rem;
-      background: #0b0f17;
-      border-bottom: 1px solid var(--card-border);
-      color: white;
+      padding: 1.25rem;
+      background: var(--neo-yellow);
+      border-bottom: 3px solid var(--neo-black);
+      color: var(--neo-black);
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -468,69 +669,57 @@
     .incident-drawer-body {
       flex: 1;
       overflow-y: auto;
-      padding: 1rem;
-      background: #0b0f17;
+      padding: 1.25rem;
+      background: var(--neo-bg);
     }
     .incident-card {
-      background: #131b2a;
-      border-radius: 0.5rem;
-      border: 1px solid var(--card-border);
-      color: #f1f5f9;
-      padding: 0.85rem;
-      margin-bottom: 0.85rem;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+      background: var(--neo-surface);
+      border-radius: 8px;
+      border: 2px solid var(--neo-black);
+      color: var(--neo-black);
+      padding: 1rem;
+      margin-bottom: 1rem;
+      box-shadow: 3px 3px 0px var(--neo-black);
     }
     .incident-card.unack {
-      border-left: 4px solid #ef4444;
+      border-left: 6px solid var(--neo-red);
     }
     .incident-card.ack {
-      border-left: 4px solid #10b981;
-      opacity: 0.85;
+      border-left: 6px solid var(--neo-lime);
+      opacity: 0.9;
     }
     .incident-thumb {
       width: 100%;
       height: 140px;
       object-fit: cover;
-      border-radius: 0.35rem;
+      border-radius: 6px;
       margin-top: 0.5rem;
-      border: 1px solid #334155;
+      border: 2px solid var(--neo-black);
       cursor: pointer;
     }
     .drawer-backdrop {
       display: none;
       position: fixed;
       inset: 0;
-      background: rgba(0, 0, 0, 0.65);
+      background: rgba(0, 0, 0, 0.5);
       z-index: 9999;
     }
     .drawer-backdrop.active {
       display: block;
     }
-
-    /* Slider Container */
-    .threshold-control {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.5rem;
-      background: #131b2a;
-      border: 1px solid var(--card-border);
-      color: var(--text-main);
-      padding: 0.4rem 0.9rem;
-      border-radius: 0.5rem;
-      box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
-      vertical-align: middle;
-      margin: 0 0.3rem;
-    }
   </style>
 </head>
 <body>
+  <!-- getlayers.ai Fluid Follower Cursor Elements -->
+  <div class="layers-cursor-dot" id="cursorDot"></div>
+  <div class="layers-cursor-follower" id="cursorFollower"></div>
 
   <!-- Top Tactical Navigation -->
   <nav class="command-nav">
     <div class="d-flex justify-content-between align-items-center">
       <div class="d-flex align-items-center gap-3">
         <a href="/" class="brand-title">
-          <i class="bi bi-shield-shaded text-primary"></i>
+          <i class="bi bi-shield-shaded"></i>
           <span>CrowdPulse CMS</span>
         </a>
         <span class="brand-badge">Surveillance Core</span>
@@ -558,131 +747,192 @@
   </nav>
 
   <div class="live-container">
-    <!-- Compact Header -->
-    <div class="page-header">
-      <h1 class="page-title">Live Camera Feed</h1>
-      <p class="page-subtitle">Real-time Crowd Analysis & Monitoring</p>
+    <!-- CCTV Tactical Header -->
+    <div class="cctv-header">
+      <div>
+        <div class="d-flex align-items-center gap-2 mb-1">
+          <span class="badge border-2 border-black font-mono fw-bold" style="background: var(--neo-yellow); color: #000; font-size: 0.72rem; border-radius: 4px; box-shadow: 2px 2px 0px #000;">CCTV SECTOR 01</span>
+          <span class="badge border-2 border-black font-mono fw-bold d-inline-flex align-items-center gap-1" style="background: var(--neo-lime); color: #000; font-size: 0.72rem; border-radius: 4px; box-shadow: 2px 2px 0px #000;">
+            <span class="pulse-dot-green"></span> REC 25 FPS
+          </span>
+        </div>
+        <h1 class="page-title">Live Camera Surveillance Console</h1>
+      </div>
+      <div class="d-flex align-items-center gap-2">
+        <span class="badge border-2 border-black font-mono small py-1 px-2 fw-bold" style="background: var(--neo-cyan); color: #000; border-radius: 6px; box-shadow: 2px 2px 0px #000;">
+          MODEL: YOLO26M (CUDA:0)
+        </span>
+      </div>
     </div>
 
-    <!-- Compact Stats Bar -->
-    <div class="stats-bar">
-      <div class="row g-2">
-        <div class="col-3">
-          <div class="stat-item">
-            <span class="stat-number" id="peopleCount">26</span>
-            <span class="stat-label">People</span>
-          </div>
+    <!-- 4-Card Telemetry Stats Bar with Kit Langton Rolling Numbers -->
+    <div class="stats-grid">
+      <!-- Card 1: People Count -->
+      <div class="telemetry-card">
+        <div class="telemetry-card-header">
+          <span class="telemetry-label">PEOPLE DETECTED</span>
+          <i class="bi bi-people-fill fs-5"></i>
         </div>
-        <div class="col-3">
-          <div class="stat-item">
-            <span class="stat-number" id="densityLevel">Medium</span>
-            <span class="stat-label">Density</span>
-          </div>
+        <div class="telemetry-value-wrap">
+          <span class="telemetry-number">
+            <span class="rolling-number-wrap" id="peopleCount"></span>
+          </span>
         </div>
-        <div class="col-3">
-          <div class="stat-item">
-            <span class="stat-number" id="alertStatus">Safe</span>
-            <span class="stat-label">Status</span>
-          </div>
+        <div class="telemetry-subtext">
+          Safety Limit: <span id="statThresholdSub" class="fw-bold" style="color: var(--neo-black);">15</span> max
         </div>
-        <div class="col-3">
-          <div class="stat-item">
-            <span class="stat-number" id="uptime">00:12</span>
-            <span class="stat-label">Uptime</span>
-          </div>
+      </div>
+
+      <!-- Card 2: Crowd Density -->
+      <div class="telemetry-card">
+        <div class="telemetry-card-header">
+          <span class="telemetry-label">CROWD DENSITY</span>
+          <i class="bi bi-soundwave fs-5"></i>
+        </div>
+        <div class="telemetry-value-wrap mt-1">
+          <span id="densityLevel" class="density-pill density-medium">Medium</span>
+        </div>
+        <div class="telemetry-subtext">
+          Gaussian Thermal Diffusion
+        </div>
+      </div>
+
+      <!-- Card 3: Security Status -->
+      <div class="telemetry-card">
+        <div class="telemetry-card-header">
+          <span class="telemetry-label">SECURITY PROTOCOL</span>
+          <i class="bi bi-shield-check fs-5" id="statusShieldIcon"></i>
+        </div>
+        <div class="telemetry-value-wrap mt-1">
+          <span id="alertStatus" class="font-mono fw-bold" style="font-size: 1.25rem;">Safe</span>
+        </div>
+        <div class="telemetry-subtext">
+          Sustained Window: 3.0s
+        </div>
+      </div>
+
+      <!-- Card 4: Uptime -->
+      <div class="telemetry-card">
+        <div class="telemetry-card-header">
+          <span class="telemetry-label">SURVEILLANCE UPTIME</span>
+          <i class="bi bi-stopwatch fs-5"></i>
+        </div>
+        <div class="telemetry-value-wrap mt-1">
+          <span id="uptime" class="font-mono fw-bold" style="font-size: 1.35rem;">00:00</span>
+        </div>
+        <div class="telemetry-subtext">
+          Continuous Edge Pipeline
         </div>
       </div>
     </div>
 
-    <!-- Security Alert Strobe Banner -->
+    <!-- Sustained Overcrowding Alert Glass Banner -->
     <div id="securityAlertBanner" class="alert-banner d-none">
       <div class="d-flex align-items-center justify-content-between flex-wrap gap-2">
-        <div class="d-flex align-items-center gap-2">
-          <i class="bi bi-exclamation-triangle-fill fs-4 text-warning"></i>
+        <div class="d-flex align-items-center gap-3">
+          <i class="bi bi-exclamation-triangle-fill fs-2"></i>
           <div>
-            <strong class="text-uppercase tracking-wider">Sustained Overcrowding Alert:</strong>
-            <span>Count (<span id="alertCountBadge">0</span>) has exceeded threshold (<span id="alertThresholdBadge">15</span>) for over 3 seconds!</span>
+            <strong class="text-uppercase tracking-wider d-block font-display" style="font-size: 1.05rem;">Sustained Overcrowding Breach</strong>
+            <span class="small font-mono fw-semibold">
+              Headcount (<strong id="alertCountBadge">0</strong>) has exceeded safety threshold (<strong id="alertThresholdBadge">15</strong>) for over 3 continuous seconds.
+            </span>
           </div>
         </div>
         <div class="d-flex align-items-center gap-2">
-          <button class="btn btn-sm btn-outline-light" onclick="toggleSirenMute()">
-            <i class="bi bi-volume-up-fill" id="bannerSirenIcon"></i> <span id="bannerSirenText">Mute</span>
+          <button class="btn-neo btn-neo-white py-1 px-3" onclick="toggleSirenMute()" style="font-size: 0.85rem;">
+            <i class="bi bi-volume-up-fill" id="bannerSirenIcon"></i> <span id="bannerSirenText">Mute Siren</span>
           </button>
-          <button class="btn btn-sm btn-light text-danger fw-bold" onclick="openIncidentDrawer()">
-            Review Incidents
+          <button class="btn-neo btn-neo-yellow py-1 px-3" onclick="openIncidentDrawer()" style="font-size: 0.85rem;">
+            <i class="bi bi-shield-exclamation me-1"></i>Review Incidents
           </button>
         </div>
       </div>
     </div>
 
-    <!-- Main Content Area -->
-    <div class="main-content">
-      <!-- Stream Container -->
-      <div class="stream-container" id="mainFeed">
-        <img src="{{ url_for('video_feed') }}" alt="Live Stream" id="mainImage" />
+    <!-- Stream Card Container (16:9 Flush Fit) -->
+    <div class="stream-card" id="streamCardWrapper">
+      <div class="stream-topbar">
+        <div class="d-flex align-items-center gap-2">
+          <span class="pulse-dot-green"></span>
+          <span class="font-mono text-black fw-bold small">FEED // CAM-01: PEDESTRIAN CONCOURSE</span>
+          <span class="badge border-2 border-black font-mono" style="background: var(--neo-surface); color: #000; font-size: 0.72rem; box-shadow: 1px 1px 0px #000;">1280x720 · 25 FPS</span>
+        </div>
+        <div class="d-flex align-items-center gap-3 font-mono small text-black fw-bold">
+          <span class="d-none d-md-inline"><i class="bi bi-bounding-box me-1"></i>ByteTrack Persist</span>
+          <span><i class="bi bi-cursor me-1"></i>Click Area to Magnify</span>
+        </div>
+      </div>
+
+      <div class="stream-viewport" id="mainFeed">
+        <img src="{{ url_for('video_feed') }}" alt="Live Surveillance Feed" id="mainImage" />
       </div>
     </div>
 
-    <!-- Compact Controls -->
-    <div class="controls-section d-flex align-items-center justify-content-center flex-wrap gap-2">
-      <button class="toggle-btn" id="heatmapBtn" onclick="toggleHeatmap()">
-        <i class="bi bi-thermometer-half me-1"></i><span id="heatmapBtnText">Enable Heat Map</span>
-      </button>
+    <!-- Tactical Command Bar -->
+    <div class="command-bar">
+      <!-- Cluster 1: Vision Overlays -->
+      <div class="command-cluster">
+        <button class="toggle-btn" id="heatmapBtn" onclick="toggleHeatmap()">
+          <i class="bi bi-thermometer-half"></i><span id="heatmapBtnText">Enable Heat Map</span>
+        </button>
 
-      <!-- Dynamic Alert Threshold Slider -->
-      <div class="threshold-control">
-        <span class="small fw-semibold text-secondary">Limit: <strong id="thresholdVal" class="text-danger">15</strong></span>
-        <input type="range" class="form-range" id="thresholdRange" min="5" max="60" value="15" style="width: 100px;" oninput="onThresholdInput(this.value)" onchange="onThresholdChange(this.value)">
+        <button class="toggle-btn" id="resBtn" onclick="toggleResolution()">
+          <i class="bi bi-aspect-ratio"></i><span id="resText">640px</span>
+        </button>
       </div>
 
-      <!-- Siren Mute Toggle -->
-      <button class="toggle-btn btn-secondary" id="sirenBtn" onclick="toggleSirenMute()">
-        <i class="bi bi-volume-up-fill me-1" id="sirenIcon"></i><span id="sirenBtnText">Siren On</span>
-      </button>
+      <!-- Cluster 2: Alert Limit Slider -->
+      <div class="command-cluster">
+        <div class="threshold-pill">
+          <span class="small font-mono fw-bold">LIMIT:</span>
+          <input type="range" class="custom-slider" id="thresholdRange" min="5" max="60" value="15" oninput="onThresholdInput(this.value)" onchange="onThresholdChange(this.value)">
+          <span class="badge border-2 border-black font-mono fw-bold" id="thresholdVal" style="background: var(--neo-yellow); color: #000; box-shadow: 2px 2px 0px #000;">15</span>
+        </div>
 
-      <!-- Incident History Drawer Toggle -->
-      <button class="toggle-btn btn-warning text-dark position-relative" onclick="openIncidentDrawer()">
-        <i class="bi bi-shield-exclamation me-1"></i>Incidents <span id="incidentBadge" class="badge bg-danger ms-1">0</span>
-      </button>
+        <button class="toggle-btn" id="sirenBtn" onclick="toggleSirenMute()">
+          <i class="bi bi-volume-up-fill" id="sirenIcon"></i><span id="sirenBtnText">Siren On</span>
+        </button>
+      </div>
 
-      <!-- Webhook Dispatch Settings -->
-      <button class="toggle-btn btn-secondary" onclick="openWebhookModal()">
-        <i class="bi bi-link-45deg me-1"></i>Webhook
-      </button>
+      <!-- Cluster 3: Audit & Navigation -->
+      <div class="command-cluster">
+        <button class="toggle-btn" onclick="openIncidentDrawer()">
+          <i class="bi bi-shield-exclamation"></i>Incidents <span id="incidentBadge" class="badge border-2 border-black ms-1" style="background: var(--neo-pink); color: #000; box-shadow: 1px 1px 0px #000;">0</span>
+        </button>
 
-      <!-- Resolution Toggle -->
-      <button class="toggle-btn btn-secondary" id="resBtn" onclick="toggleResolution()">
-        <i class="bi bi-aspect-ratio me-1"></i><span id="resText">640px</span>
-      </button>
+        <button class="toggle-btn" onclick="openWebhookModal()">
+          <i class="bi bi-broadcast"></i>Webhook
+        </button>
 
-      <button class="toggle-btn btn-secondary" onclick="window.location.href='/'">
-        <i class="bi bi-house me-1"></i>Dashboard
-      </button>
+        <button class="toggle-btn" onclick="window.location.href='/'">
+          <i class="bi bi-house"></i>Dashboard
+        </button>
+      </div>
     </div>
 
-    <!-- FIXED: Full-width Info Panel -->
+    <!-- Collapsible Tactical Info Accordion -->
     <div class="info-panel" id="infoPanel">
       <div class="info-header" onclick="toggleInfoPanel()">
-        <span><i class="bi bi-info-circle me-2"></i>How to Use & System Status</span>
+        <span><i class="bi bi-info-circle me-2"></i>Surveillance Operation Protocols & System Diagnostics</span>
         <i class="bi bi-chevron-down expand-icon"></i>
       </div>
       <div class="info-content">
         <div class="info-grid">
           <div class="info-section">
-            <h6><i class="bi bi-mouse me-2"></i>Instructions</h6>
+            <h6><i class="bi bi-mouse me-2"></i>Operator Instructions</h6>
             <ul class="info-list">
-              <li><i class="bi bi-cursor"></i>Click video to zoom into areas</li>
-              <li><i class="bi bi-eye"></i>Green boxes show detected people</li>
-              <li><i class="bi bi-thermometer"></i>Toggle heatmap for density view</li>
-              <li><i class="bi bi-bell"></i>Adjust Limit slider to set alert trigger</li>
+              <li><i class="bi bi-cursor"></i>Click anywhere on the live video to magnify that coordinate grid cell.</li>
+              <li><i class="bi bi-eye"></i>Green bounding boxes track detected persons with collision-free confidence badges.</li>
+              <li><i class="bi bi-thermometer"></i>Toggle the Thermal Heat Map button for Gaussian density cluster overlays.</li>
+              <li><i class="bi bi-sliders"></i>Adjust the Limit slider to reconfigure the sustained alert headcount threshold.</li>
             </ul>
           </div>
           <div class="info-section">
-            <h6><i class="bi bi-gear me-2"></i>System Status</h6>
+            <h6><i class="bi bi-cpu me-2"></i>System Diagnostics</h6>
             <ul class="info-list">
-              <li><i class="bi bi-cpu"></i>Model: YOLO26m (Fine-Tuned Transfer)</li>
-              <li><i class="bi bi-camera-video"></i>Feed: Live 25 FPS</li>
-              <li><i class="bi bi-shield-check"></i>Monitoring & Security Alerts: Active</li>
+              <li><i class="bi bi-check-circle"></i>Model: Ultralytics YOLO26m (Small-Target Aware Transfer Architecture)</li>
+              <li><i class="bi bi-camera-video"></i>Stream: 25 FPS Progressive MJPEG at native 1280x720 CCTV resolution</li>
+              <li><i class="bi bi-shield-check"></i>Alert Engine: Sustained 3.0s window with 30s alert fatigue cooldown</li>
             </ul>
           </div>
         </div>
@@ -690,14 +940,14 @@
     </div>
   </div>
 
-  <!-- Optimized Zoom Modal -->
+  <!-- Magnified Cell Zoom Modal -->
   <div id="zoomModal" class="modal">
     <div class="modal-content">
       <div class="modal-header">
-        <h2 class="modal-title"><i class="bi bi-zoom-in me-2"></i>Magnified View</h2>
+        <h2 class="modal-title"><i class="bi bi-zoom-in me-2"></i>Magnified Cell Inspection</h2>
         <button class="close" id="modalClose">&times;</button>
       </div>
-      <img src="{{ url_for('zoom_feed') }}" alt="Zoomed Cell" id="zoomedImg" />
+      <img src="{{ url_for('zoom_feed') }}" alt="Zoomed Coordinate Cell" id="zoomedImg" />
     </div>
   </div>
 
@@ -705,20 +955,20 @@
   <div id="webhookModal" class="modal">
     <div class="modal-content">
       <div class="modal-header">
-        <h5 class="modal-title"><i class="bi bi-broadcast me-2 text-primary"></i>Security Webhook Dispatch</h5>
+        <h5 class="modal-title"><i class="bi bi-broadcast me-2"></i>Security Webhook Dispatch</h5>
         <button class="close" onclick="closeWebhookModal()">&times;</button>
       </div>
       <div class="modal-body p-0 py-3">
-        <p class="small text-muted mb-3">
-          Configure an automated webhook URL (Slack, Discord, Microsoft Teams, or custom API) that will receive JSON payloads whenever sustained overcrowding is detected.
+        <p class="small text-muted mb-3 font-mono">
+          Configure an automated webhook URL (Slack, Discord, Microsoft Teams, or custom SOC endpoint) that receives real-time JSON payloads whenever sustained overcrowding is detected.
         </p>
         <div class="mb-3">
-          <label class="form-label small fw-semibold text-secondary">Webhook Endpoint URL</label>
-          <input type="url" class="form-control" id="webhookInput" placeholder="https://hooks.slack.com/services/... or Discord/Teams webhook" />
+          <label class="form-label small fw-bold text-black font-mono">WEBHOOK ENDPOINT URL</label>
+          <input type="url" class="form-control border-3 border-black font-mono small" id="webhookInput" placeholder="https://hooks.slack.com/services/... or Discord/Teams webhook" style="box-shadow: 3px 3px 0px #000;" />
         </div>
         <div class="d-flex justify-content-end gap-2">
-          <button class="btn btn-secondary btn-sm" onclick="closeWebhookModal()">Cancel</button>
-          <button class="btn btn-primary btn-sm" onclick="saveWebhook()">Save Webhook</button>
+          <button class="btn-neo btn-neo-white py-1 px-3" onclick="closeWebhookModal()">Cancel</button>
+          <button class="btn-neo btn-neo-yellow py-1 px-3" onclick="saveWebhook()">Save Webhook</button>
         </div>
       </div>
     </div>
@@ -729,48 +979,35 @@
   <div id="incidentDrawer" class="incident-drawer">
     <div class="incident-drawer-header">
       <div class="d-flex align-items-center gap-2">
-        <i class="bi bi-shield-check fs-5 text-primary"></i>
-        <h6 class="mb-0 fw-bold">Security Incidents Log</h6>
+        <i class="bi bi-shield-check fs-4"></i>
+        <h5 class="mb-0 fw-bold font-mono">SECURITY INCIDENTS LOG</h5>
       </div>
-      <button type="button" class="btn-close btn-close-white" onclick="closeIncidentDrawer()"></button>
+      <button type="button" class="close" onclick="closeIncidentDrawer()">&times;</button>
     </div>
     <div class="incident-drawer-body" id="incidentList">
-      <div class="text-center text-muted py-4 small">Loading incidents...</div>
+      <div class="text-center text-muted py-4 small font-mono">Loading incidents...</div>
     </div>
   </div>
 
   <script>
-    // Grid configuration
+    // Grid coordinate configuration
     const gridRows = 6;
     const gridCols = 6;
     const actualWidth = 1280;
     const actualHeight = 720;
 
-    // DOM elements
+    // DOM Elements
     const mainFeed = document.getElementById("mainFeed");
     const modal = document.getElementById("zoomModal");
     const modalClose = document.getElementById("modalClose");
     const infoPanel = document.getElementById("infoPanel");
-
-    // Initialize animations
-    window.addEventListener('DOMContentLoaded', () => {
-      // Quick, smooth animations
-      gsap.to(".page-header", { opacity: 1, duration: 0.6, ease: "power2.out" });
-      gsap.to(".stats-bar", { opacity: 1, duration: 0.6, delay: 0.1, ease: "power2.out" });
-      gsap.to(".stream-container", { opacity: 1, duration: 0.6, delay: 0.2, ease: "power2.out" });
-      gsap.to(".controls-section", { opacity: 1, duration: 0.6, delay: 0.3, ease: "power2.out" });
-      gsap.to(".info-panel", { opacity: 1, duration: 0.6, delay: 0.4, ease: "power2.out" });
-
-      startUptimeCounter();
-      updateStats();
-    });
 
     // Toggle info panel
     function toggleInfoPanel() {
       infoPanel.classList.toggle('expanded');
     }
 
-    // Click handler for grid zoom
+    // Grid Cell Magnification Handler
     mainFeed.addEventListener("click", function(event) {
       const rect = mainFeed.getBoundingClientRect();
       const clickX = event.clientX - rect.left;
@@ -788,37 +1025,89 @@
       const col = Math.floor(realX / cellW);
       const row = Math.floor(realY / cellH);
 
-      gsap.to(mainFeed, { scale: 0.98, duration: 0.1, yoyo: true, repeat: 1 });
-
       fetch(`/set_zoom?row=${row}&col=${col}`)
         .then(response => {
           modal.style.display = "block";
-          setTimeout(() => modal.classList.add("show"), 10);
         })
         .catch(error => {
           console.error("Error setting zoom cell:", error);
         });
     });
 
-    // Modal close handlers
+    // Modal Close Handlers
     modalClose.onclick = closeModal;
     window.onclick = function(event) {
       if (event.target === modal) closeModal();
     };
 
     function closeModal() {
-      modal.classList.remove("show");
-      setTimeout(() => {
-        modal.style.display = "none";
-        fetch(`/set_zoom?row=-1&col=-1`);
-      }, 300);
+      modal.style.display = "none";
+      fetch(`/set_zoom?row=-1&col=-1`);
     }
 
-    // Track heatmap state
+    // =========================================================================
+    // Kit Langton Rolling Number Reels
+    // =========================================================================
+    function createRollingNumber(container, value) {
+      if (!container) return;
+      container.innerHTML = '';
+      const str = String(value);
+
+      for (const ch of str) {
+        if (ch >= '0' && ch <= '9') {
+          const reel = document.createElement('span');
+          reel.className = 'rolling-digit-reel';
+          for (let i = 0; i <= 9; i++) {
+            const digit = document.createElement('span');
+            digit.className = 'rolling-digit';
+            digit.textContent = i;
+            reel.appendChild(digit);
+          }
+          container.appendChild(reel);
+          const target = parseInt(ch, 10);
+          reel.style.transform = 'translateY(0%)';
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              reel.style.transform = `translateY(-${target * 10}%)`;
+            });
+          });
+        } else {
+          const charSpan = document.createElement('span');
+          charSpan.className = 'rolling-char';
+          charSpan.textContent = ch;
+          container.appendChild(charSpan);
+        }
+      }
+    }
+
+    function updateRollingNumber(container, newValue) {
+      if (!container) return;
+      const reels = container.querySelectorAll('.rolling-digit-reel');
+      const digits = String(newValue).replace(/[^0-9]/g, '');
+
+      if (reels.length !== digits.length) {
+        createRollingNumber(container, newValue);
+        return;
+      }
+
+      let digitIdx = 0;
+      for (const ch of String(newValue)) {
+        if (ch >= '0' && ch <= '9') {
+          const target = parseInt(ch, 10);
+          reels[digitIdx].style.transform = `translateY(-${target * 10}%)`;
+          digitIdx++;
+        }
+      }
+    }
+
+    // Heatmap State Handling
     let heatmapEnabled = false;
 
-    // On page load, fetch current heatmap state from backend
     window.addEventListener('DOMContentLoaded', () => {
+      createRollingNumber(document.getElementById('peopleCount'), '0');
+      startUptimeCounter();
+      updateStats();
+
       fetch('/camera_stats')
         .then(res => res.json())
         .then(stats => {
@@ -827,27 +1116,24 @@
             updateHeatmapBtn();
           }
         })
-        .catch(() => {}); // ignore errors
+        .catch(() => {});
     });
 
     function updateHeatmapBtn() {
       const btn = document.getElementById('heatmapBtn');
       const text = document.getElementById('heatmapBtnText');
       if (heatmapEnabled) {
-        btn.classList.add('btn-danger');
-        btn.classList.remove('btn-primary');
+        btn.classList.add('btn-active-red');
+        btn.classList.remove('btn-active-cyan');
         text.textContent = "Disable Heat Map";
       } else {
-        btn.classList.remove('btn-danger');
-        btn.classList.add('btn-primary');
+        btn.classList.remove('btn-active-red');
+        btn.classList.add('btn-active-cyan');
         text.textContent = "Enable Heat Map";
       }
     }
 
-    // Toggle heatmap with animation and update button text
     async function toggleHeatmap() {
-      const btn = document.getElementById('heatmapBtn');
-      gsap.to(btn, { scale: 0.95, duration: 0.1, yoyo: true, repeat: 1 });
       try {
         const response = await fetch('/toggle_heatmap', { method: 'POST' });
         if (response.ok) {
@@ -860,7 +1146,7 @@
       }
     }
 
-    // Uptime counter
+    // Uptime Counter
     let startTime = Date.now();
     function startUptimeCounter() {
       setInterval(() => {
@@ -872,7 +1158,7 @@
       }, 1000);
     }
 
-    // Audio Siren Synthesizer using Web Audio API
+    // Web Audio Siren Synthesizer
     let audioCtx = null;
     let sirenInterval = null;
     let sirenMuted = false;
@@ -925,25 +1211,29 @@
 
       if (sirenMuted) {
         stopSiren();
-        if (sirenIcon) sirenIcon.className = 'bi bi-volume-mute-fill me-1 text-danger';
+        if (sirenIcon) sirenIcon.className = 'bi bi-volume-mute-fill';
         if (sirenText) sirenText.textContent = 'Muted';
-        if (bannerIcon) bannerIcon.className = 'bi bi-volume-mute-fill me-1';
-        if (bannerText) bannerText.textContent = 'Unmute';
+        if (bannerIcon) bannerIcon.className = 'bi bi-volume-mute-fill';
+        if (bannerText) bannerText.textContent = 'Unmute Siren';
       } else {
-        if (sirenIcon) sirenIcon.className = 'bi bi-volume-up-fill me-1 text-success';
+        if (sirenIcon) sirenIcon.className = 'bi bi-volume-up-fill';
         if (sirenText) sirenText.textContent = 'Siren On';
-        if (bannerIcon) bannerIcon.className = 'bi bi-volume-up-fill me-1';
-        if (bannerText) bannerText.textContent = 'Mute';
+        if (bannerIcon) bannerIcon.className = 'bi bi-volume-up-fill';
+        if (bannerText) bannerText.textContent = 'Mute Siren';
       }
     }
 
-    // Dynamic Alert Threshold Handlers
+    // Dynamic Threshold Slider
     function onThresholdInput(val) {
       document.getElementById('thresholdVal').textContent = val;
+      const sub = document.getElementById('statThresholdSub');
+      if (sub) sub.textContent = val;
     }
 
     async function onThresholdChange(val) {
       document.getElementById('thresholdVal').textContent = val;
+      const sub = document.getElementById('statThresholdSub');
+      if (sub) sub.textContent = val;
       try {
         await fetch('/api/settings/threshold', {
           method: 'POST',
@@ -971,11 +1261,10 @@
       }
     }
 
-    // Webhook Configuration Modal Handlers
+    // Webhook Modal Handlers
     const webhookModal = document.getElementById('webhookModal');
     async function openWebhookModal() {
       webhookModal.style.display = 'block';
-      setTimeout(() => webhookModal.classList.add('show'), 10);
       try {
         const res = await fetch('/api/settings');
         if (res.ok) {
@@ -986,8 +1275,7 @@
     }
 
     function closeWebhookModal() {
-      webhookModal.classList.remove('show');
-      setTimeout(() => webhookModal.style.display = 'none', 250);
+      webhookModal.style.display = 'none';
     }
 
     async function saveWebhook() {
@@ -1028,7 +1316,7 @@
         const incidents = data.incidents || [];
 
         if (incidents.length === 0) {
-          container.innerHTML = '<div class="text-center text-muted py-4 small">No security incidents logged yet. System is safe.</div>';
+          container.innerHTML = '<div class="text-center text-muted py-4 small font-mono fw-bold">No security incidents logged. Area secure.</div>';
           return;
         }
 
@@ -1038,27 +1326,27 @@
           return `
             <div class="${cardClass}" id="card-${inc.id}">
               <div class="d-flex justify-content-between align-items-center mb-1">
-                <span class="badge ${isAck ? 'bg-success' : 'bg-danger'} text-uppercase" style="font-size: 0.65rem;">
+                <span class="badge border-2 border-black text-uppercase font-mono fw-bold" style="font-size: 0.7rem; background: ${isAck ? 'var(--neo-lime)' : 'var(--neo-red)'}; color: #000;">
                   ${isAck ? 'Acknowledged' : 'Critical Alert'}
                 </span>
-                <span class="small text-muted" style="font-size: 0.75rem;">${inc.timestamp}</span>
+                <span class="small font-mono fw-bold" style="font-size: 0.72rem;">${inc.timestamp}</span>
               </div>
-              <div class="small fw-semibold text-dark">
-                Crowd Count: <span class="text-danger fw-bold">${inc.people_count}</span> (Limit: ${inc.threshold})
+              <div class="small fw-bold text-black font-mono">
+                Crowd Count: <span class="fw-bold">${inc.people_count}</span> (Limit: ${inc.threshold})
               </div>
               <a href="${inc.snapshot_url}" target="_blank" title="Click to view full snapshot">
                 <img src="${inc.snapshot_url}" class="incident-thumb" alt="Incident Snapshot" onerror="this.style.display='none'" />
               </a>
               <div class="mt-2 d-flex justify-content-end">
-                ${isAck ? '<span class="small text-success"><i class="bi bi-check-all me-1"></i>Handled</span>' : 
-                  `<button class="btn btn-xs btn-outline-danger py-0 px-2 small" onclick="acknowledgeIncident('${inc.id}')">Acknowledge</button>`
+                ${isAck ? '<span class="small font-mono fw-bold"><i class="bi bi-check-all me-1"></i>Handled</span>' : 
+                  `<button class="btn-neo btn-neo-yellow py-0 px-2 small font-mono" onclick="acknowledgeIncident('${inc.id}')">Acknowledge</button>`
                 }
               </div>
             </div>
           `;
         }).join('');
       } catch (err) {
-        container.innerHTML = '<div class="text-center text-danger py-4 small">Failed to load incidents.</div>';
+        container.innerHTML = '<div class="text-center py-4 small font-mono fw-bold" style="color: var(--neo-black);">Failed to load incidents.</div>';
       }
     }
 
@@ -1073,44 +1361,71 @@
       }
     }
 
-    // Update stats dynamically from backend
+    // Dynamic Live Telemetry Poller
     async function fetchStats() {
       try {
         const res = await fetch('/camera_stats');
         if (res.ok) {
           const stats = await res.json();
           const count = stats.people_count !== undefined ? stats.people_count : 0;
-          document.getElementById('peopleCount').textContent = count;
-          document.getElementById('densityLevel').textContent = stats.density_level || 'Low';
-          const alertEl = document.getElementById('alertStatus');
+          const threshold = stats.alert_threshold || 15;
+          const density = stats.density_level || 'Low';
           const alertStatus = stats.alert_status || 'Safe';
-          alertEl.textContent = alertStatus;
-          if (alertStatus === 'Alert') {
-            alertEl.style.color = '#dc3545';
-          } else if (alertStatus === 'Caution') {
-            alertEl.style.color = '#fd7e14';
-          } else {
-            alertEl.style.color = '#007bff';
+          const isTriggered = Boolean(stats.active_alert_triggered);
+
+          // Update Kit Langton Rolling Headcount
+          updateRollingNumber(document.getElementById('peopleCount'), count);
+
+          // Density Pill
+          const densityEl = document.getElementById('densityLevel');
+          if (densityEl) {
+            densityEl.textContent = density;
+            densityEl.className = 'density-pill';
+            if (density === 'Critical') {
+              densityEl.classList.add('density-critical');
+            } else if (density === 'High') {
+              densityEl.classList.add('density-high');
+            } else if (density === 'Medium') {
+              densityEl.classList.add('density-medium');
+            } else {
+              densityEl.classList.add('density-low');
+            }
+          }
+
+          // Security Status Text & Shield Icon
+          const alertEl = document.getElementById('alertStatus');
+          const shieldIcon = document.getElementById('statusShieldIcon');
+          if (alertEl) {
+            alertEl.textContent = alertStatus;
+            if (alertStatus === 'Alert') {
+              if (shieldIcon) shieldIcon.className = 'bi bi-shield-fill-exclamation';
+            } else if (alertStatus === 'Caution') {
+              if (shieldIcon) shieldIcon.className = 'bi bi-shield-exclamation';
+            } else {
+              if (shieldIcon) shieldIcon.className = 'bi bi-shield-check';
+            }
           }
 
           // Incident count badge
           const unack = stats.unacknowledged_incidents || 0;
-          document.getElementById('incidentBadge').textContent = unack;
+          const incidentBadge = document.getElementById('incidentBadge');
+          if (incidentBadge) incidentBadge.textContent = unack;
 
-          // Sustained Alert Banner and Siren Strobe Handling
+          // Sustained Alert Banner & Stream Aura
           const banner = document.getElementById('securityAlertBanner');
-          const mainImage = document.getElementById('mainImage');
-          const isTriggered = Boolean(stats.active_alert_triggered);
+          const streamCard = document.getElementById('streamCardWrapper');
 
           if (isTriggered) {
-            banner.classList.remove('d-none');
-            document.getElementById('alertCountBadge').textContent = count;
-            document.getElementById('alertThresholdBadge').textContent = stats.alert_threshold || 15;
-            if (mainImage) mainImage.classList.add('stream-alert-border');
+            if (banner) banner.classList.remove('d-none');
+            const alertCountBadge = document.getElementById('alertCountBadge');
+            const alertThresholdBadge = document.getElementById('alertThresholdBadge');
+            if (alertCountBadge) alertCountBadge.textContent = count;
+            if (alertThresholdBadge) alertThresholdBadge.textContent = threshold;
+            if (streamCard) streamCard.classList.add('alert-active');
             startSiren();
           } else {
-            banner.classList.add('d-none');
-            if (mainImage) mainImage.classList.remove('stream-alert-border');
+            if (banner) banner.classList.add('d-none');
+            if (streamCard) streamCard.classList.remove('alert-active');
             stopSiren();
           }
         }
@@ -1122,6 +1437,33 @@
     function updateStats() {
       fetchStats();
       setInterval(fetchStats, 1000);
+    }
+
+    // =========================================================================
+    // getlayers.ai Fluid Follower Cursor Physics
+    // =========================================================================
+    const cursorDot = document.getElementById('cursorDot');
+    const cursorFollower = document.getElementById('cursorFollower');
+    if (cursorDot && cursorFollower && window.matchMedia('(pointer: fine)').matches) {
+      let mouseX = -100, mouseY = -100;
+      let followerX = -100, followerY = -100;
+      window.addEventListener('mousemove', e => {
+        mouseX = e.clientX; mouseY = e.clientY;
+        cursorDot.style.left = `${mouseX}px`;
+        cursorDot.style.top = `${mouseY}px`;
+      });
+      function renderCursor() {
+        followerX += (mouseX - followerX) * 0.18;
+        followerY += (mouseY - followerY) * 0.18;
+        cursorFollower.style.left = `${followerX}px`;
+        cursorFollower.style.top = `${followerY}px`;
+        requestAnimationFrame(renderCursor);
+      }
+      requestAnimationFrame(renderCursor);
+      document.querySelectorAll('a, button, .toggle-btn, .btn-neo, .stream-viewport, .incident-card, .info-header, .telemetry-card').forEach(el => {
+        el.addEventListener('mouseenter', () => cursorFollower.classList.add('hovering'));
+        el.addEventListener('mouseleave', () => cursorFollower.classList.remove('hovering'));
+      });
     }
   </script>
 </body>

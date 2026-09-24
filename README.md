@@ -51,11 +51,17 @@ CMS is an advanced crowd management platform designed to enhance safety, efficie
 - **Heatmap Visualization:**  
   Dynamic heatmaps overlay movement and density patterns, highlighting high-traffic zones and congestion areas.
 
-- **Grid Cell Inspection:**  
-  Select any grid cell from the live stream to inspect a magnified view.
+- **Neo-Brutalism UI Theme Architecture:**  
+  Bold, unapologetic, high-contrast aesthetic across all views (`/`, `/video_studio`, `/live_preview`, `/live_camera`) inspired by the Neo-Brutalism UI Library. Features thick black outlines (`border: 2px solid #000` / `3px solid #000`), signature hard non-blurred offset drop shadows (`box-shadow: 4px 4px 0px #000`, `6px 6px 0px #000`, `8px 8px 0px #000`), tactile mechanical click states (`active: translate(2px, 2px) box-shadow: 0px 0px 0px #000`), punchy pastel color blocks (`#FFE500` Yellow, `#A6FAFF` Cyan, `#B8FF9F` Lime, `#FFA6F6` Pink, `#FFC29F` Orange, `#FF9F9F` Red), clean paper canvas (`#FAF7F2`), and strictly zero emojis.
 
-- **Tactical Dark Command Center Theme:**  
-  High-contrast `#0b0f17` / `#111827` visual design across all views with emerald green telemetry accents and zero emojis.
+- **Kit Langton Rolling Number Reels:**  
+  Vertical sliding digit reels (`.rolling-digit-reel`) with spring kinematics (`cubic-bezier(0.16, 1, 0.3, 1)`) animating numerical benchmarks, latency, headcount, and live telemetry on incoming sensor changes.
+
+- **getlayers.ai Fluid Follower Cursor:**  
+  Neo-brutalist follower cursor with 2px black outline, yellow translucent core, offset shadow, and magnetic expansion over interactive elements.
+
+- **Vengeance UI Specular Light Physics:**  
+  Tactile buttons (`.btn-neo`) with dynamic radial specular light reflections tracking cursor mouse position (`--mouse-x`, `--mouse-y`) and instant tactile click feedback.
 
 - **FastAPI Backend:**  
   Clean, high-performance asynchronous and threaded REST endpoints adhering to modern FastAPI and Pydantic best practices.

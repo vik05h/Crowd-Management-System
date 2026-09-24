@@ -4,72 +4,147 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Video Processing Studio | Crowd Management System</title>
+
+  <!-- Google Fonts: Space Grotesk, Inter, JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
+
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
   <style>
+    /* ==========================================================================
+       Neo-Brutalism UI Design Tokens
+       ========================================================================== */
     :root {
-      --bg-dark: #0b0f17;
-      --card-bg: #131b2a;
-      --card-border: #1e293b;
-      --text-main: #f1f5f9;
-      --text-muted: #94a3b8;
-      --accent-emerald: #10b981;
-      --accent-cyan: #06b6d4;
-      --accent-amber: #f59e0b;
-      --accent-rose: #ef4444;
-      --accent-blue: #3b82f6;
+      --neo-bg: #FAF7F2;
+      --neo-surface: #FFFFFF;
+      --neo-black: #000000;
+      --neo-yellow: #FFE500;
+      --neo-cyan: #A6FAFF;
+      --neo-lime: #B8FF9F;
+      --neo-pink: #FFA6F6;
+      --neo-orange: #FFC29F;
+      --neo-red: #FF9F9F;
+      --neo-shadow: 4px 4px 0px #000000;
+      --neo-shadow-lg: 6px 6px 0px #000000;
+      --neo-shadow-xl: 8px 8px 0px #000000;
+      --font-display: 'Space Grotesk', -apple-system, sans-serif;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
     }
+
     * {
       margin: 0;
       padding: 0;
       box-sizing: border-box;
     }
+
     body {
-      background-color: var(--bg-dark);
-      color: var(--text-main);
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background-color: var(--neo-bg);
+      color: var(--neo-black);
+      font-family: var(--font-sans);
       min-height: 100vh;
       display: flex;
       flex-direction: column;
+      background-image: radial-gradient(var(--neo-black) 1px, transparent 1px);
+      background-size: 24px 24px;
+      overflow-x: hidden;
     }
-    /* Navigation */
+
+    /* getlayers.ai Fluid Follower Cursor */
+    @media (pointer: fine) {
+      .layers-cursor-dot {
+        position: fixed; top: 0; left: 0; width: 8px; height: 8px; background-color: var(--neo-black); border-radius: 50%; pointer-events: none; z-index: 99999; transform: translate(-50%, -50%);
+      }
+      .layers-cursor-follower {
+        position: fixed; top: 0; left: 0; width: 36px; height: 36px; border: 2px solid var(--neo-black); background: rgba(255, 229, 0, 0.4); box-shadow: 2px 2px 0px var(--neo-black); border-radius: 50%; pointer-events: none; z-index: 99998; transform: translate(-50%, -50%); transition: width 0.25s ease, height 0.25s ease;
+      }
+      .layers-cursor-follower.hovering {
+        width: 60px; height: 60px; background: rgba(166, 250, 255, 0.55); border-color: var(--neo-black); box-shadow: 4px 4px 0px var(--neo-black);
+      }
+    }
+    @media (pointer: coarse) {
+      .layers-cursor-dot, .layers-cursor-follower { display: none !important; }
+    }
+
+    /* Neo-Brutalism Button System */
+    .btn-neo {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.65rem 1.4rem;
+      border: 3px solid var(--neo-black);
+      border-radius: 8px;
+      background: var(--neo-yellow);
+      color: var(--neo-black);
+      font-weight: 700;
+      font-size: 0.9rem;
+      font-family: var(--font-sans);
+      text-decoration: none;
+      box-shadow: var(--neo-shadow);
+      cursor: pointer;
+      user-select: none;
+      transition: transform 0.12s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.12s cubic-bezier(0.2, 0, 0, 1);
+    }
+    .btn-neo:hover {
+      transform: translate(-2px, -2px);
+      box-shadow: var(--neo-shadow-lg);
+      color: var(--neo-black);
+    }
+    .btn-neo:active {
+      transform: translate(2px, 2px);
+      box-shadow: 0px 0px 0px var(--neo-black);
+    }
+
+    .btn-neo-cyan { background: var(--neo-cyan); }
+    .btn-neo-white { background: var(--neo-surface); }
+    .btn-neo-lime { background: var(--neo-lime); }
+    .btn-neo-danger { background: var(--neo-red); }
+
+    /* Command Navigation */
     .command-nav {
-      background: #0f172a;
-      border-bottom: 1px solid var(--card-border);
-      padding: 0.75rem 1.5rem;
+      background: var(--neo-surface);
+      border-bottom: 4px solid var(--neo-black);
+      padding: 0.85rem 1.5rem;
     }
     .brand-title {
-      font-weight: 700;
-      font-size: 1.15rem;
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 1.2rem;
       letter-spacing: -0.02em;
-      color: #ffffff;
+      color: var(--neo-black);
       display: flex;
       align-items: center;
       gap: 0.5rem;
       text-decoration: none;
     }
     .brand-badge {
-      font-size: 0.65rem;
-      font-weight: 600;
-      padding: 0.2rem 0.45rem;
-      border-radius: 4px;
-      background: rgba(16, 185, 129, 0.15);
-      color: var(--accent-emerald);
-      border: 1px solid rgba(16, 185, 129, 0.3);
+      font-family: var(--font-mono);
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 0.25rem 0.6rem;
+      border-radius: 6px;
+      background: var(--neo-lime);
+      color: var(--neo-black);
+      border: 2px solid var(--neo-black);
+      box-shadow: 2px 2px 0px var(--neo-black);
       text-transform: uppercase;
-      letter-spacing: 0.05em;
     }
     .nav-links {
       display: flex;
-      gap: 0.75rem;
+      gap: 0.65rem;
       align-items: center;
     }
     .nav-btn {
-      color: var(--text-muted);
+      color: var(--neo-black);
       text-decoration: none;
       font-size: 0.88rem;
-      font-weight: 500;
-      padding: 0.4rem 0.8rem;
+      font-weight: 700;
+      padding: 0.45rem 0.85rem;
+      border: 2px solid transparent;
       border-radius: 6px;
       transition: all 0.15s ease;
       display: flex;
@@ -77,72 +152,88 @@
       gap: 0.4rem;
     }
     .nav-btn:hover {
-      color: #ffffff;
-      background: rgba(255, 255, 255, 0.05);
+      background: var(--neo-yellow);
+      border-color: var(--neo-black);
+      box-shadow: 2px 2px 0px var(--neo-black);
+      transform: translate(-1px, -1px);
+      color: var(--neo-black);
     }
     .nav-btn.active {
-      color: #ffffff;
-      background: #1e293b;
-      border: 1px solid #334155;
+      color: var(--neo-black);
+      background: var(--neo-yellow);
+      border: 2px solid var(--neo-black);
+      box-shadow: 2px 2px 0px var(--neo-black);
     }
+
     /* Main Layout */
     .studio-container {
       max-width: 1440px;
       margin: 0 auto;
       width: 100%;
-      padding: 1.5rem;
+      padding: 1.75rem 1.5rem 3rem 1.5rem;
       flex: 1;
     }
-    /* Header Area */
+
     .section-header {
-      margin-bottom: 1.5rem;
+      margin-bottom: 1.75rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      flex-wrap: wrap;
+      gap: 1rem;
     }
     .section-title {
-      font-size: 1.4rem;
-      font-weight: 700;
+      font-family: var(--font-display);
+      font-size: 1.85rem;
+      font-weight: 800;
       letter-spacing: -0.02em;
       margin-bottom: 0.25rem;
     }
     .section-subtitle {
-      color: var(--text-muted);
-      font-size: 0.85rem;
+      color: #555555;
+      font-size: 0.95rem;
+      font-weight: 500;
     }
+
     /* Studio Grid */
     .studio-grid {
       display: grid;
-      grid-template-columns: 1fr 340px;
-      gap: 1.5rem;
+      grid-template-columns: 1fr 360px;
+      gap: 1.75rem;
     }
     @media (max-width: 992px) {
       .studio-grid {
         grid-template-columns: 1fr;
       }
     }
-    /* Video Viewport */
+
+    /* Viewport Card */
     .viewport-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
+      background: var(--neo-surface);
+      border: 3px solid var(--neo-black);
       border-radius: 12px;
       overflow: hidden;
       display: flex;
       flex-direction: column;
       position: relative;
+      box-shadow: var(--neo-shadow-xl);
     }
     .viewport-bar {
-      padding: 0.65rem 1rem;
-      background: #0f172a;
-      border-bottom: 1px solid var(--card-border);
+      padding: 0.75rem 1.25rem;
+      background: var(--neo-yellow);
+      border-bottom: 3px solid var(--neo-black);
       display: flex;
+      flex-wrap: wrap;
       justify-content: space-between;
       align-items: center;
-      font-size: 0.82rem;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+      font-family: var(--font-mono);
+      font-weight: 700;
     }
     .viewport-screen {
       position: relative;
-      background: #05080f;
+      background: #000000;
       min-height: 480px;
       display: flex;
       align-items: center;
@@ -156,204 +247,218 @@
       object-fit: contain;
       display: block;
     }
+
     /* Upload Drop Zone */
     .upload-dropzone {
-      border: 2px dashed #334155;
-      border-radius: 10px;
-      padding: 3rem 1.5rem;
+      border: 3px dashed var(--neo-black);
+      border-radius: 12px;
+      padding: 3.5rem 1.5rem;
       text-align: center;
-      background: rgba(15, 23, 42, 0.4);
+      background: var(--neo-surface);
       cursor: pointer;
-      transition: all 0.2s ease;
+      box-shadow: var(--neo-shadow-lg);
+      transition: all 0.15s ease;
       width: 100%;
       max-width: 520px;
       margin: 2rem auto;
     }
     .upload-dropzone:hover,
     .upload-dropzone.dragover {
-      border-color: var(--accent-blue);
-      background: rgba(59, 130, 246, 0.05);
+      background: #FFFDF0;
+      transform: translate(-2px, -2px);
+      box-shadow: var(--neo-shadow-xl);
     }
     .upload-icon {
-      font-size: 2.5rem;
-      color: var(--accent-blue);
+      font-size: 2.8rem;
+      color: var(--neo-black);
       margin-bottom: 0.75rem;
     }
+
     /* Progress Overlay */
     .progress-bar-container {
-      background: #0f172a;
-      padding: 1rem 1.25rem;
-      border-top: 1px solid var(--card-border);
+      background: var(--neo-surface);
+      padding: 1.1rem 1.5rem;
+      border-top: 3px solid var(--neo-black);
     }
     .progress-meta {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      font-size: 0.82rem;
-      margin-bottom: 0.5rem;
-      color: var(--text-muted);
-    }
-    .progress-meta strong {
-      color: #ffffff;
+      font-size: 0.88rem;
+      margin-bottom: 0.65rem;
+      font-family: var(--font-mono);
+      font-weight: 700;
     }
     .custom-progress {
-      height: 8px;
-      background: #1e293b;
-      border-radius: 4px;
+      height: 14px;
+      background: #E5E0D8;
+      border: 2px solid var(--neo-black);
+      border-radius: 6px;
       overflow: hidden;
+      box-shadow: 2px 2px 0px var(--neo-black);
     }
     .custom-progress-fill {
       height: 100%;
-      background: linear-gradient(90deg, #3b82f6, #06b6d4);
+      background: var(--neo-yellow);
+      border-right: 2px solid var(--neo-black);
       transition: width 0.2s ease;
-      border-radius: 4px;
     }
+
     /* Sidebar Panels */
     .panel-card {
-      background: var(--card-bg);
-      border: 1px solid var(--card-border);
+      background: var(--neo-surface);
+      border: 3px solid var(--neo-black);
       border-radius: 12px;
-      padding: 1.25rem;
-      margin-bottom: 1.25rem;
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: var(--neo-shadow-lg);
     }
     .panel-heading {
-      font-size: 0.88rem;
-      font-weight: 600;
-      color: var(--text-muted);
+      font-family: var(--font-display);
+      font-size: 1.05rem;
+      font-weight: 800;
+      color: var(--neo-black);
       text-transform: uppercase;
-      letter-spacing: 0.05em;
-      margin-bottom: 1rem;
+      letter-spacing: 0.03em;
+      margin-bottom: 1.25rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
+      border-bottom: 2px solid var(--neo-black);
+      padding-bottom: 0.5rem;
     }
+
     /* Stat Cards */
     .stat-row {
       display: grid;
       grid-template-columns: 1fr 1fr;
-      gap: 0.75rem;
-      margin-bottom: 0.75rem;
+      gap: 0.85rem;
+      margin-bottom: 0.85rem;
     }
     .stat-box {
-      background: #0f172a;
-      border: 1px solid var(--card-border);
+      border: 2px solid var(--neo-black);
       border-radius: 8px;
-      padding: 0.85rem;
+      padding: 0.9rem;
       text-align: center;
+      box-shadow: 3px 3px 0px var(--neo-black);
     }
+    .stat-box.box-lime { background: var(--neo-lime); }
+    .stat-box.box-cyan { background: var(--neo-cyan); }
+    .stat-box.box-yellow { background: var(--neo-yellow); }
+    .stat-box.box-pink { background: var(--neo-pink); }
+
     .stat-val {
-      font-size: 1.5rem;
-      font-weight: 700;
-      color: #ffffff;
-      line-height: 1.2;
+      font-size: 1.65rem;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      color: var(--neo-black);
+      line-height: 1.1;
     }
-    .stat-val.emerald { color: var(--accent-emerald); }
-    .stat-val.rose { color: var(--accent-rose); }
-    .stat-val.blue { color: var(--accent-blue); }
     .stat-lbl {
-      font-size: 0.7rem;
-      color: var(--text-muted);
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--neo-black);
       text-transform: uppercase;
       letter-spacing: 0.04em;
-      margin-top: 0.25rem;
+      font-family: var(--font-mono);
+      margin-top: 0.3rem;
     }
+
     /* Video Library Items */
     .library-list {
       max-height: 380px;
       overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.65rem;
     }
     .library-item {
-      background: #0f172a;
-      border: 1px solid var(--card-border);
+      background: var(--neo-bg);
+      border: 2px solid var(--neo-black);
       border-radius: 8px;
-      padding: 0.75rem;
-      margin-bottom: 0.6rem;
+      padding: 0.85rem;
       display: flex;
       justify-content: space-between;
       align-items: center;
-      transition: border-color 0.15s ease;
+      box-shadow: 2px 2px 0px var(--neo-black);
+      transition: transform 0.1s ease;
     }
     .library-item:hover {
-      border-color: #3b82f6;
+      transform: translate(-1px, -1px);
+      box-shadow: 3px 3px 0px var(--neo-black);
     }
     .lib-title {
-      font-size: 0.82rem;
-      font-weight: 600;
-      color: #ffffff;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--neo-black);
       white-space: nowrap;
       overflow: hidden;
       text-overflow: ellipsis;
       max-width: 170px;
     }
     .lib-meta {
-      font-size: 0.7rem;
-      color: var(--text-muted);
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      color: #666666;
+      font-weight: 600;
     }
     .lib-actions {
       display: flex;
-      gap: 0.35rem;
+      gap: 0.4rem;
     }
     .btn-action {
-      background: #1e293b;
-      border: 1px solid #334155;
-      color: var(--text-muted);
-      padding: 0.3rem 0.55rem;
-      border-radius: 5px;
-      font-size: 0.78rem;
+      background: var(--neo-yellow);
+      border: 2px solid var(--neo-black);
+      color: var(--neo-black);
+      padding: 0.35rem 0.65rem;
+      border-radius: 6px;
+      font-size: 0.85rem;
+      font-weight: 700;
       text-decoration: none;
       cursor: pointer;
+      box-shadow: 2px 2px 0px var(--neo-black);
+      transition: all 0.12s ease;
     }
     .btn-action:hover {
-      background: #2563eb;
-      color: #ffffff;
-      border-color: #2563eb;
+      background: var(--neo-cyan);
+      transform: translate(-1px, -1px);
+      box-shadow: 3px 3px 0px var(--neo-black);
+      color: var(--neo-black);
     }
-    /* Buttons */
-    .btn-primary-studio {
-      background: #2563eb;
-      border: none;
-      color: white;
-      font-weight: 500;
-      padding: 0.55rem 1.1rem;
+    .btn-action:active {
+      transform: translate(1px, 1px);
+      box-shadow: 0px 0px 0px var(--neo-black);
+    }
+
+    /* Badges */
+    .badge-neo {
+      display: inline-block;
+      border: 2px solid var(--neo-black);
       border-radius: 6px;
-      font-size: 0.88rem;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      cursor: pointer;
-      transition: background 0.15s ease;
+      padding: 0.25rem 0.65rem;
+      font-size: 0.78rem;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      box-shadow: 2px 2px 0px var(--neo-black);
     }
-    .btn-primary-studio:hover {
-      background: #1d4ed8;
-      color: white;
-    }
-    .btn-secondary-studio {
-      background: #1e293b;
-      border: 1px solid #334155;
-      color: #f1f5f9;
-      font-weight: 500;
-      padding: 0.55rem 1.1rem;
-      border-radius: 6px;
-      font-size: 0.88rem;
-      display: inline-flex;
-      align-items: center;
-      gap: 0.4rem;
-      cursor: pointer;
-    }
-    .btn-secondary-studio:hover {
-      background: #334155;
-      color: white;
-    }
+    .badge-idle { background: var(--neo-surface); color: var(--neo-black); }
+    .badge-active { background: var(--neo-cyan); color: var(--neo-black); }
+    .badge-done { background: var(--neo-lime); color: var(--neo-black); }
+    .badge-err { background: var(--neo-red); color: var(--neo-black); }
   </style>
 </head>
 <body>
+
+  <!-- getlayers.ai Fluid Follower Cursor Elements -->
+  <div class="layers-cursor-dot" id="cursorDot"></div>
+  <div class="layers-cursor-follower" id="cursorFollower"></div>
 
   <!-- Top Tactical Navigation -->
   <nav class="command-nav">
     <div class="d-flex justify-content-between align-items-center">
       <div class="d-flex align-items-center gap-3">
         <a href="/" class="brand-title">
-          <i class="bi bi-shield-shaded text-primary"></i>
+          <i class="bi bi-shield-shaded"></i>
           <span>CrowdPulse CMS</span>
         </a>
         <span class="brand-badge">YOLO26m CrowdHuman</span>
@@ -389,7 +494,7 @@
       </div>
 
       <div class="d-flex gap-2">
-        <button class="btn-secondary-studio" onclick="document.getElementById('studioFileInput').click()">
+        <button class="btn-neo btn-neo-white" onclick="document.getElementById('studioFileInput').click()">
           <i class="bi bi-upload"></i>
           <span>Upload Video</span>
         </button>
@@ -403,10 +508,10 @@
       <div class="viewport-card">
         <div class="viewport-bar">
           <div class="d-flex align-items-center gap-2">
-            <span class="badge bg-primary" id="statusBadge">Idle</span>
-            <span id="activeVideoName" class="text-white fw-medium">No video loaded</span>
+            <span class="badge-neo badge-idle" id="statusBadge">Idle</span>
+            <span id="activeVideoName" class="text-black fw-bold">No video loaded</span>
           </div>
-          <div class="d-flex gap-3 text-muted">
+          <div class="d-flex gap-3 text-black">
             <span id="hudFps">0.0 FPS</span>
             <span id="hudFrame">Frame 0 / 0</span>
             <span id="hudResolution">640px</span>
@@ -419,9 +524,9 @@
           <div id="uploadPrompt" class="text-center p-4">
             <div class="upload-dropzone" id="dropZone">
               <i class="bi bi-cloud-arrow-up upload-icon"></i>
-              <h5 class="fw-bold mb-1">Select or Drag Surveillance Video</h5>
-              <p class="text-muted small mb-3">Supported formats: MP4, MOV, AVI (up to 100 MB)</p>
-              <button class="btn-primary-studio" onclick="document.getElementById('studioFileInput').click()">
+              <h4 class="fw-bold mb-1">Select or Drag Surveillance Video</h4>
+              <p class="text-muted small mb-3">Supported formats: MP4, MOV, AVI (up to 250 MB)</p>
+              <button class="btn-neo btn-neo-yellow" onclick="document.getElementById('studioFileInput').click()">
                 <i class="bi bi-folder2-open"></i> Browse Files
               </button>
             </div>
@@ -458,36 +563,36 @@
         <div class="panel-card">
           <div class="panel-heading">
             <span>Crowd Telemetry</span>
-            <i class="bi bi-graph-up text-primary"></i>
+            <i class="bi bi-graph-up"></i>
           </div>
 
           <div class="stat-row">
-            <div class="stat-box">
-              <div class="stat-val emerald" id="telemetryCurrent">0</div>
+            <div class="stat-box box-lime">
+              <div class="stat-val" id="telemetryCurrent">0</div>
               <div class="stat-lbl">Active Count</div>
             </div>
-            <div class="stat-box">
-              <div class="stat-val blue" id="telemetryPeak">0</div>
+            <div class="stat-box box-cyan">
+              <div class="stat-val" id="telemetryPeak">0</div>
               <div class="stat-lbl">Peak Count</div>
             </div>
           </div>
 
           <div class="stat-row">
-            <div class="stat-box">
+            <div class="stat-box box-yellow">
               <div class="stat-val" id="telemetryAvg">0.0</div>
               <div class="stat-lbl">Avg Density</div>
             </div>
-            <div class="stat-box">
-              <div class="stat-val rose" id="telemetryBreaches">0</div>
+            <div class="stat-box box-pink">
+              <div class="stat-val" id="telemetryBreaches">0</div>
               <div class="stat-lbl">Alert Breaches</div>
             </div>
           </div>
 
           <div class="d-grid gap-2 mt-3" id="completionActions" style="display: none;">
-            <a href="#" id="downloadVideoBtn" class="btn-primary-studio justify-content-center" download>
+            <a href="#" id="downloadVideoBtn" class="btn-neo btn-neo-yellow justify-content-center" download>
               <i class="bi bi-download"></i> Download Processed MP4
             </a>
-            <button class="btn-secondary-studio justify-content-center" onclick="resetStudioView()">
+            <button class="btn-neo btn-neo-white justify-content-center" onclick="resetStudioView()">
               <i class="bi bi-arrow-repeat"></i> Process Another Video
             </button>
           </div>
@@ -497,8 +602,8 @@
         <div class="panel-card">
           <div class="panel-heading">
             <span>Stored Video Archive</span>
-            <button class="btn btn-sm btn-link p-0 text-decoration-none text-muted" onclick="loadProcessedLibrary()">
-              <i class="bi bi-arrow-clockwise"></i>
+            <button class="btn btn-sm p-0 text-black border-0" onclick="loadProcessedLibrary()">
+              <i class="bi bi-arrow-clockwise fs-5"></i>
             </button>
           </div>
 
@@ -570,7 +675,7 @@
       const formData = new FormData();
       formData.append('video', file);
 
-      statusBadge.className = 'badge bg-warning text-dark';
+      statusBadge.className = 'badge-neo badge-active';
       statusBadge.textContent = 'Uploading...';
       activeVideoName.textContent = file.name;
 
@@ -605,7 +710,7 @@
       processingFeedImg.style.display = 'block';
       progressBarSection.style.display = 'block';
 
-      statusBadge.className = 'badge bg-info text-dark';
+      statusBadge.className = 'badge-neo badge-active';
       statusBadge.textContent = 'Analyzing Frames';
       activeVideoName.textContent = filename;
 
@@ -637,7 +742,7 @@
           finishProcessingView(job);
         } else if (job.error) {
           clearInterval(pollInterval);
-          statusBadge.className = 'badge bg-danger';
+          statusBadge.className = 'badge-neo badge-err';
           statusBadge.textContent = 'Error';
           alert('Processing error: ' + job.error);
         }
@@ -651,7 +756,7 @@
       processingFeedImg.style.display = 'none';
       progressBarSection.style.display = 'none';
 
-      statusBadge.className = 'badge bg-success';
+      statusBadge.className = 'badge-neo badge-done';
       statusBadge.textContent = 'Completed';
       activeVideoName.textContent = job.output_file;
 
@@ -687,7 +792,7 @@
       completionActions.style.display = 'none';
       uploadPrompt.style.display = 'block';
 
-      statusBadge.className = 'badge bg-primary';
+      statusBadge.className = 'badge-neo badge-idle';
       statusBadge.textContent = 'Idle';
       activeVideoName.textContent = 'No video loaded';
       hudFrame.textContent = 'Frame 0 / 0';
@@ -741,7 +846,7 @@
       storedVideoPlayer.load();
       storedVideoPlayer.play();
 
-      statusBadge.className = 'badge bg-success';
+      statusBadge.className = 'badge-neo badge-done';
       statusBadge.textContent = 'Stored Output';
       activeVideoName.textContent = name;
 
@@ -761,6 +866,31 @@
         }
       }).catch(() => {});
     });
+
+    // getlayers.ai cursor physics
+    const cursorDot = document.getElementById('cursorDot');
+    const cursorFollower = document.getElementById('cursorFollower');
+    if (cursorDot && cursorFollower && window.matchMedia('(pointer: fine)').matches) {
+      let mouseX = -100, mouseY = -100;
+      let followerX = -100, followerY = -100;
+      window.addEventListener('mousemove', e => {
+        mouseX = e.clientX; mouseY = e.clientY;
+        cursorDot.style.left = `${mouseX}px`;
+        cursorDot.style.top = `${mouseY}px`;
+      });
+      function renderCursor() {
+        followerX += (mouseX - followerX) * 0.18;
+        followerY += (mouseY - followerY) * 0.18;
+        cursorFollower.style.left = `${followerX}px`;
+        cursorFollower.style.top = `${followerY}px`;
+        requestAnimationFrame(renderCursor);
+      }
+      requestAnimationFrame(renderCursor);
+      document.querySelectorAll('a, button, .btn-neo, .panel-card, .upload-dropzone').forEach(el => {
+        el.addEventListener('mouseenter', () => cursorFollower.classList.add('hovering'));
+        el.addEventListener('mouseleave', () => cursorFollower.classList.remove('hovering'));
+      });
+    }
   </script>
 </body>
 </html>

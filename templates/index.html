@@ -3,545 +3,1446 @@
 <head>
   <meta charset="UTF-8"/>
   <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Crowd Management System</title>
+  <title>Crowd Management System | Real-Time Edge AI & Spatial Telemetry</title>
+
+  <!-- Google Fonts: Space Grotesk, Inter, JetBrains Mono -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600;700&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet">
+
   <!-- Bootstrap CSS -->
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <!-- Bootstrap Icons -->
-  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.0/font/bootstrap-icons.css" rel="stylesheet">
-  <!-- GSAP CDN -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
 
   <style>
+    /* ==========================================================================
+       Neo-Brutalism UI Design System Tokens
+       Reference: https://neo-brutalism-ui-library.vercel.app/overview
+       ========================================================================== */
+    :root {
+      --neo-bg: #FAF7F2;
+      --neo-surface: #FFFFFF;
+      --neo-black: #000000;
+      --neo-yellow: #FFE500;
+      --neo-yellow-light: #FFF480;
+      --neo-cyan: #A6FAFF;
+      --neo-cyan-light: #D4FCFF;
+      --neo-lime: #B8FF9F;
+      --neo-lime-light: #DDFFCE;
+      --neo-pink: #FFA6F6;
+      --neo-violet: #A8A6FF;
+      --neo-orange: #FFC29F;
+      --neo-red: #FF9F9F;
+      --neo-border-width: 3px;
+      --neo-shadow: 4px 4px 0px #000000;
+      --neo-shadow-lg: 6px 6px 0px #000000;
+      --neo-shadow-xl: 8px 8px 0px #000000;
+      --neo-shadow-sm: 2px 2px 0px #000000;
+      --font-display: 'Space Grotesk', -apple-system, sans-serif;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
     body {
-      background: linear-gradient(135deg, #edf6ff 0%, #e6f2ff 100%);
+      background-color: var(--neo-bg);
+      color: var(--neo-black);
+      font-family: var(--font-sans);
       min-height: 100vh;
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-      color: #333;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+      background-image: radial-gradient(var(--neo-black) 1px, transparent 1px);
+      background-size: 24px 24px;
+      background-position: 0 0;
     }
-    .navbar-brand {
-        font-weight: 600;
+
+    .font-mono {
+      font-family: var(--font-mono);
     }
-    .hero-section {
-      min-height: 85vh;
-      display: flex;
-      align-items: center;
-      padding-top: 80px;
-      padding-bottom: 40px;
+
+    .font-display {
+      font-family: var(--font-display);
     }
-    .hero-text-content h1 {
-        font-weight: 700;
-        line-height: 1.2;
-        color: #102a43;
+
+    /* ==========================================================================
+       getlayers.ai Fluid Follower Cursor (Neo-Brutalism Edition)
+       ========================================================================== */
+    @media (pointer: fine) {
+      .layers-cursor-dot {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 8px;
+        height: 8px;
+        background-color: var(--neo-black);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 99999;
+        transform: translate(-50%, -50%);
+        transition: opacity 0.2s ease, transform 0.1s ease;
+      }
+      .layers-cursor-follower {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 36px;
+        height: 36px;
+        border: 2px solid var(--neo-black);
+        background: rgba(255, 229, 0, 0.4);
+        box-shadow: 2px 2px 0px var(--neo-black);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 99998;
+        transform: translate(-50%, -50%);
+        transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1), 
+                    height 0.25s cubic-bezier(0.16, 1, 0.3, 1), 
+                    border-color 0.2s ease, 
+                    background-color 0.2s ease,
+                    box-shadow 0.2s ease;
+        will-change: left, top, width, height;
+      }
+      .layers-cursor-follower.hovering {
+        width: 62px;
+        height: 62px;
+        background: rgba(166, 250, 255, 0.55);
+        border-color: var(--neo-black);
+        box-shadow: 4px 4px 0px var(--neo-black);
+      }
     }
-    .hero-text-content p {
-        font-size: 1.1rem;
-        color: #486581;
-        max-width: 500px;
+
+    @media (pointer: coarse) {
+      .layers-cursor-dot, .layers-cursor-follower {
+        display: none !important;
+      }
     }
-    .svg-hero-container {
-      background-color: #ffffff;
-      border-radius: 24px;
-      padding: 2rem;
-      box-shadow: 0 12px 40px rgba(0, 123, 255, 0.15);
-      display: flex;
+
+    /* ==========================================================================
+       Neo-Brutalism Button System (with Vengeance UI Specular Physics)
+       ========================================================================== */
+    .btn-neo, .btn-liquid-metal {
+      position: relative;
+      display: inline-flex;
       align-items: center;
       justify-content: center;
-    }
-    .action-btn {
-      padding: 0.8rem 1.75rem;
-      font-size: 1.05rem;
-      font-weight: 500;
-      border-radius: 0.5rem;
-      transition: transform 0.2s ease-out, box-shadow 0.2s ease-out;
-      margin: 0.5rem;
-    }
-    .action-btn:hover {
-      transform: translateY(-4px);
-      box-shadow: 0 10px 20px rgba(0, 123, 255, 0.2);
-    }
-    .btn-camera {
-      background: linear-gradient(135deg, #28a745, #20c997);
-      color: white;
-      border: none;
-    }
-    .btn-camera:hover {
-      background: linear-gradient(135deg, #218838, #1ea37a);
-      color: white;
-      box-shadow: 0 10px 20px rgba(40, 167, 69, 0.3);
-    }
-    .feature-card {
-      background: white;
-      border-radius: 1rem;
-      padding: 1.5rem;
-      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
-      transition: transform 0.3s ease, box-shadow 0.3s ease;
-      height: 100%;
-    }
-    .feature-card:hover {
-      transform: translateY(-8px);
-      box-shadow: 0 8px 30px rgba(0, 123, 255, 0.15);
-    }
-    .feature-icon {
-      width: 60px;
-      height: 60px;
-      background: linear-gradient(135deg, #007bff, #0056b3);
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      font-size: 1.5rem;
-      margin-bottom: 1rem;
-    }
-    .stats-section {
-      background: linear-gradient(135deg, #007bff, #0056b3);
-      color: white;
-      padding: 4rem 0;
-    }
-    .stat-item {
-      text-align: center;
-    }
-    .stat-number {
-      font-size: 2.5rem;
+      gap: 0.6rem;
+      padding: 0.75rem 1.6rem;
+      border: 3px solid var(--neo-black);
+      border-radius: 8px;
+      background: var(--neo-yellow);
+      color: var(--neo-black);
       font-weight: 700;
+      font-size: 0.95rem;
+      font-family: var(--font-sans);
+      text-decoration: none;
+      box-shadow: var(--neo-shadow);
+      cursor: pointer;
+      overflow: hidden;
+      transition: transform 0.12s cubic-bezier(0.2, 0, 0, 1), box-shadow 0.12s cubic-bezier(0.2, 0, 0, 1), background-color 0.15s ease;
+      user-select: none;
+    }
+
+    .btn-neo:hover, .btn-liquid-metal:hover {
+      transform: translate(-2px, -2px);
+      box-shadow: var(--neo-shadow-lg);
+      color: var(--neo-black);
+    }
+
+    .btn-neo:active, .btn-liquid-metal:active {
+      transform: translate(2px, 2px);
+      box-shadow: 0px 0px 0px var(--neo-black);
+    }
+
+    /* Vengeance UI Specular Light Reflection Sheen */
+    .btn-neo::before, .btn-liquid-metal::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: radial-gradient(
+        circle 90px at var(--mouse-x, 50%) var(--mouse-y, 50%),
+        rgba(255, 255, 255, 0.75) 0%,
+        rgba(255, 255, 255, 0.25) 45%,
+        rgba(255, 255, 255, 0) 70%
+      );
+      opacity: 0;
+      transition: opacity 0.25s ease;
+      pointer-events: none;
+      mix-blend-mode: overlay;
+    }
+
+    .btn-neo:hover::before, .btn-liquid-metal:hover::before {
+      opacity: 1;
+    }
+
+    /* Color Variants */
+    .btn-neo-cyan, .btn-liquid-metal-secondary {
+      background: var(--neo-cyan);
+      color: var(--neo-black);
+    }
+    .btn-neo-lime {
+      background: var(--neo-lime);
+      color: var(--neo-black);
+    }
+    .btn-neo-pink {
+      background: var(--neo-pink);
+      color: var(--neo-black);
+    }
+    .btn-neo-white {
+      background: var(--neo-surface);
+      color: var(--neo-black);
+    }
+    .btn-neo-dark {
+      background: var(--neo-black);
+      color: #FFFFFF;
+    }
+    .btn-neo-dark:hover {
+      color: var(--neo-yellow);
+    }
+
+    /* ==========================================================================
+       Kit Langton Rolling Number Reels
+       ========================================================================== */
+    .rolling-number-wrap {
+      display: inline-flex;
+      align-items: flex-start;
+      overflow: hidden;
+      height: 1.25em;
+      line-height: 1.25em;
+      vertical-align: -0.15em;
+      font-variant-numeric: tabular-nums;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: var(--neo-black);
+    }
+
+    .rolling-digit-reel {
+      display: inline-flex;
+      flex-direction: column;
+      flex-shrink: 0;
+      height: 12.5em;
+      transition: transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+      will-change: transform;
+    }
+
+    .rolling-digit {
+      height: 1.25em;
+      line-height: 1.25em;
+      text-align: center;
+      flex-shrink: 0;
       display: block;
     }
-    .upload-card {
-        background-color: #ffffff;
-        border-radius: 1rem;
-        padding: 2rem;
-        box-shadow: 0 8px 30px rgba(0, 0, 0, 0.08);
+
+    .rolling-char {
+      height: 1.25em;
+      line-height: 1.25em;
+      text-align: center;
+      flex-shrink: 0;
+      display: block;
+      padding: 0 0.04em;
     }
-    .upload-card h2 {
-        font-weight: 600;
-        color: #102a43;
+
+    /* ==========================================================================
+       Navigation Bar
+       ========================================================================== */
+    .cms-navbar {
+      background-color: var(--neo-surface);
+      border-bottom: 4px solid var(--neo-black);
+      padding: 0.85rem 0;
+      z-index: 1000;
     }
-    #videoPreview {
-      border: 2px dashed #cce0ff;
-      background-color: #f8faff;
-      max-height: 320px;
-      border-radius: 0.5rem;
+
+    .brand-wrap {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.75rem;
+      text-decoration: none;
+      color: var(--neo-black);
+      font-family: var(--font-display);
+      font-weight: 800;
+      font-size: 1.2rem;
+      letter-spacing: -0.02em;
     }
-    .status-message {
-        font-weight: 500;
-        min-height: 1.5em;
+
+    .brand-icon {
+      width: 34px;
+      height: 34px;
+      background: var(--neo-yellow);
+      border: 3px solid var(--neo-black);
+      border-radius: 6px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--neo-black);
+      font-weight: 800;
+      font-size: 1rem;
+      box-shadow: 2px 2px 0px var(--neo-black);
     }
-    .footer {
-        background-color: #0056b3;
-        color: #ffffff;
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--neo-lime);
+      border: 2px solid var(--neo-black);
+      color: var(--neo-black);
+      font-size: 0.8rem;
+      font-weight: 700;
+      padding: 0.3rem 0.75rem;
+      border-radius: 9999px;
+      font-family: var(--font-mono);
+      box-shadow: 2px 2px 0px var(--neo-black);
     }
-    .tech-badge {
-      background: rgba(0, 123, 255, 0.1);
-      color: #007bff;
-      padding: 0.5rem 1rem;
-      border-radius: 2rem;
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: var(--neo-black);
+      animation: pulseAnim 2s infinite ease-in-out;
+    }
+
+    @keyframes pulseAnim {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.4; transform: scale(1.3); }
+    }
+
+    .nav-btn-link {
+      color: var(--neo-black);
+      font-weight: 700;
+      font-size: 0.92rem;
+      text-decoration: none;
+      padding: 0.45rem 0.9rem;
+      border: 2px solid transparent;
+      border-radius: 6px;
+      transition: all 0.15s ease;
+    }
+
+    .nav-btn-link:hover {
+      background: var(--neo-yellow-light);
+      border-color: var(--neo-black);
+      box-shadow: 2px 2px 0px var(--neo-black);
+      transform: translate(-1px, -1px);
+      color: var(--neo-black);
+    }
+
+    /* ==========================================================================
+       Hero Section
+       ========================================================================== */
+    .hero-wrap {
+      padding-top: 120px;
+      padding-bottom: 70px;
+    }
+
+    .hero-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      background: var(--neo-pink);
+      border: 2px solid var(--neo-black);
+      border-radius: 6px;
+      padding: 0.35rem 0.85rem;
+      font-size: 0.8rem;
+      font-weight: 800;
+      font-family: var(--font-mono);
+      box-shadow: 3px 3px 0px var(--neo-black);
+      margin-bottom: 1.25rem;
+    }
+
+    .hero-title {
+      font-family: var(--font-display);
+      font-size: 3.1rem;
+      font-weight: 800;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      color: var(--neo-black);
+      margin-bottom: 1.25rem;
+    }
+
+    .hero-description {
+      font-size: 1.15rem;
+      color: #333333;
+      line-height: 1.6;
+      max-width: 540px;
+      margin-bottom: 2rem;
       font-weight: 500;
-      margin: 0.25rem;
+    }
+
+    .system-meta-bar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      padding-top: 2rem;
+      margin-top: 2rem;
+    }
+
+    .system-meta-item {
+      display: flex;
+      flex-direction: column;
+      background: var(--neo-surface);
+      border: 2px solid var(--neo-black);
+      border-radius: 8px;
+      padding: 0.75rem 1.1rem;
+      box-shadow: 3px 3px 0px var(--neo-black);
+      min-width: 130px;
+    }
+
+    .system-meta-label {
+      font-size: 0.72rem;
+      color: #555555;
+      font-weight: 700;
+      text-transform: uppercase;
+      font-family: var(--font-mono);
+      margin-bottom: 0.25rem;
+    }
+
+    .system-meta-value {
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--neo-black);
+      font-family: var(--font-mono);
+    }
+
+    /* ==========================================================================
+       Surveillance Console Card (Neo-Brutalism Bezel)
+       ========================================================================== */
+    .console-card {
+      background: var(--neo-surface);
+      border: 3px solid var(--neo-black);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: var(--neo-shadow-xl);
+    }
+
+    .console-header {
+      background: var(--neo-yellow);
+      border-bottom: 3px solid var(--neo-black);
+      padding: 0.85rem 1.25rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 0.5rem;
+      font-size: 0.85rem;
+    }
+
+    .console-header-left {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: var(--neo-black);
+    }
+
+    .feed-toggle-btn {
+      background: var(--neo-surface);
+      border: 2px solid var(--neo-black);
+      color: var(--neo-black);
+      font-size: 0.78rem;
+      font-weight: 700;
+      padding: 0.35rem 0.85rem;
+      border-radius: 6px;
+      font-family: var(--font-mono);
+      cursor: pointer;
+      box-shadow: 2px 2px 0px var(--neo-black);
+      transition: all 0.12s ease;
+    }
+
+    .feed-toggle-btn:hover {
+      background: var(--neo-cyan);
+      transform: translate(-1px, -1px);
+      box-shadow: 3px 3px 0px var(--neo-black);
+    }
+
+    .feed-toggle-btn:active {
+      transform: translate(1px, 1px);
+      box-shadow: 0px 0px 0px var(--neo-black);
+    }
+
+    .feed-toggle-btn.active {
+      background: var(--neo-cyan);
+      color: var(--neo-black);
+      box-shadow: 0px 0px 0px var(--neo-black);
+      transform: translate(2px, 2px);
+    }
+
+    .console-viewport {
+      position: relative;
+      background: #000000;
+      min-height: 330px;
+      max-height: 420px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      overflow: hidden;
+      border-bottom: 3px solid var(--neo-black);
+    }
+
+    .console-viewport img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+      transition: opacity 0.2s ease;
+    }
+
+    .viewport-overlay-badge {
+      position: absolute;
+      top: 12px;
+      left: 12px;
+      background: var(--neo-surface);
+      border: 2px solid var(--neo-black);
+      border-radius: 6px;
+      padding: 0.4rem 0.8rem;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: var(--neo-black);
+      box-shadow: 3px 3px 0px var(--neo-black);
+    }
+
+    .viewport-overlay-alert {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: var(--neo-lime);
+      border: 2px solid var(--neo-black);
+      color: var(--neo-black);
+      border-radius: 6px;
+      padding: 0.4rem 0.8rem;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 800;
+      box-shadow: 3px 3px 0px var(--neo-black);
+    }
+
+    .console-footer {
+      background: var(--neo-surface);
+      padding: 1rem 1.25rem;
+      display: flex;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+      font-size: 0.85rem;
+    }
+
+    .console-stat-pill {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-family: var(--font-mono);
+      font-weight: 600;
+      color: var(--neo-black);
+      background: var(--neo-bg);
+      border: 2px solid var(--neo-black);
+      padding: 0.35rem 0.75rem;
+      border-radius: 6px;
+      box-shadow: 2px 2px 0px var(--neo-black);
+    }
+
+    /* ==========================================================================
+       Sections
+       ========================================================================== */
+    .section-wrap {
+      padding: 80px 0;
+      border-top: 4px solid var(--neo-black);
+    }
+
+    .section-header {
+      margin-bottom: 3rem;
+    }
+
+    .section-header h2 {
+      font-family: var(--font-display);
+      font-size: 2.2rem;
+      font-weight: 800;
+      color: var(--neo-black);
+      margin-bottom: 0.6rem;
+      letter-spacing: -0.02em;
+    }
+
+    .section-header p {
+      color: #444444;
+      font-size: 1.1rem;
+      margin-bottom: 0;
+      max-width: 680px;
+      font-weight: 500;
+    }
+
+    /* Module Cards */
+    .module-card {
+      background: var(--neo-surface);
+      border: 3px solid var(--neo-black);
+      border-radius: 12px;
+      padding: 2rem;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      box-shadow: var(--neo-shadow-lg);
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+
+    .module-card:hover {
+      transform: translate(-3px, -3px);
+      box-shadow: var(--neo-shadow-xl);
+    }
+
+    .module-badge {
       display: inline-block;
+      font-family: var(--font-mono);
+      font-size: 0.75rem;
+      font-weight: 800;
+      padding: 0.3rem 0.7rem;
+      border: 2px solid var(--neo-black);
+      border-radius: 6px;
+      box-shadow: 2px 2px 0px var(--neo-black);
+      margin-bottom: 1rem;
+    }
+
+    .module-card h3 {
+      font-family: var(--font-display);
+      font-size: 1.4rem;
+      font-weight: 800;
+      color: var(--neo-black);
+      margin-bottom: 0.85rem;
+      letter-spacing: -0.01em;
+    }
+
+    .module-card p {
+      color: #444444;
+      font-size: 0.98rem;
+      line-height: 1.6;
+      margin-bottom: 1.75rem;
+    }
+
+    .module-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      font-weight: 700;
+      font-size: 0.92rem;
+      color: var(--neo-black);
+      text-decoration: none;
+      background: var(--neo-yellow);
+      border: 2px solid var(--neo-black);
+      padding: 0.5rem 1.1rem;
+      border-radius: 6px;
+      box-shadow: 3px 3px 0px var(--neo-black);
+      transition: all 0.12s ease;
+    }
+
+    .module-link:hover {
+      transform: translate(-1px, -1px);
+      box-shadow: 4px 4px 0px var(--neo-black);
+      color: var(--neo-black);
+    }
+
+    .module-link:active {
+      transform: translate(1px, 1px);
+      box-shadow: 0px 0px 0px var(--neo-black);
+    }
+
+    /* Benchmark Table */
+    .benchmark-table-card {
+      background: var(--neo-surface);
+      border: 3px solid var(--neo-black);
+      border-radius: 12px;
+      overflow: hidden;
+      box-shadow: var(--neo-shadow-xl);
+    }
+
+    .table-dark-custom {
+      width: 100%;
+      margin-bottom: 0;
+      color: var(--neo-black);
+      font-size: 0.94rem;
+      border-collapse: collapse;
+    }
+
+    .table-dark-custom th {
+      background: var(--neo-yellow);
+      color: var(--neo-black);
+      font-weight: 800;
+      padding: 1.1rem 1.5rem;
+      border-bottom: 3px solid var(--neo-black);
+      border-right: 2px solid var(--neo-black);
+      text-align: left;
+      font-family: var(--font-mono);
+      font-size: 0.85rem;
+      text-transform: uppercase;
+    }
+
+    .table-dark-custom th:last-child {
+      border-right: none;
+    }
+
+    .table-dark-custom td {
+      padding: 1.1rem 1.5rem;
+      border-bottom: 2px solid var(--neo-black);
+      border-right: 2px solid var(--neo-black);
+      vertical-align: middle;
+      background: var(--neo-surface);
+    }
+
+    .table-dark-custom tr:nth-child(even) td {
+      background: #FDFBF7;
+    }
+
+    .table-dark-custom td:last-child {
+      border-right: none;
+    }
+
+    .table-dark-custom tr:last-child td {
+      border-bottom: none;
+    }
+
+    .delta-badge-pos {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      background: var(--neo-lime);
+      border: 2px solid var(--neo-black);
+      color: var(--neo-black);
+      font-weight: 800;
+      font-family: var(--font-mono);
+      font-size: 0.82rem;
+      padding: 0.3rem 0.65rem;
+      border-radius: 6px;
+      box-shadow: 2px 2px 0px var(--neo-black);
+    }
+
+    /* Video Upload Dropzone */
+    .ingest-box {
+      background: var(--neo-surface);
+      border: 3px dashed var(--neo-black);
+      border-radius: 14px;
+      padding: 3.5rem 1.75rem;
+      text-align: center;
+      cursor: pointer;
+      box-shadow: var(--neo-shadow-lg);
+      transition: all 0.15s ease;
+    }
+
+    .ingest-box:hover, .ingest-box.dragover {
+      background: #FFFDF0;
+      border-color: var(--neo-black);
+      transform: translate(-2px, -2px);
+      box-shadow: var(--neo-shadow-xl);
+    }
+
+    .ingest-icon {
+      font-size: 2.8rem;
+      color: var(--neo-black);
+      margin-bottom: 0.75rem;
+    }
+
+    .progress-bar-wrap {
+      height: 12px;
+      background: #E5E0D8;
+      border: 2px solid var(--neo-black);
+      border-radius: 6px;
+      overflow: hidden;
+      margin-top: 1.5rem;
+      display: none;
+      box-shadow: 2px 2px 0px var(--neo-black);
+    }
+
+    .progress-bar-fill {
+      height: 100%;
+      background: var(--neo-yellow);
+      border-right: 2px solid var(--neo-black);
+      width: 0%;
+      transition: width 0.2s ease;
+    }
+
+    /* Footer */
+    .cms-footer {
+      border-top: 4px solid var(--neo-black);
+      padding: 2.5rem 0;
+      color: var(--neo-black);
+      font-size: 0.92rem;
+      font-weight: 600;
+      background: var(--neo-surface);
+    }
+
+    .footer-link {
+      color: var(--neo-black);
+      font-weight: 700;
+      text-decoration: underline;
+      text-underline-offset: 4px;
+      margin-right: 1.5rem;
+      transition: color 0.15s ease;
+    }
+
+    .footer-link:hover {
+      color: #444444;
     }
   </style>
 </head>
 <body>
-  <!-- Navbar -->
-  <nav class="navbar navbar-expand-lg navbar-dark bg-primary shadow-sm fixed-top">
+
+  <!-- getlayers.ai Fluid Follower Cursor Elements -->
+  <div class="layers-cursor-dot" id="cursorDot"></div>
+  <div class="layers-cursor-follower" id="cursorFollower"></div>
+
+  <!-- Navigation Bar -->
+  <nav class="navbar navbar-expand-lg fixed-top cms-navbar">
     <div class="container">
-      <a class="navbar-brand fs-4" href="#">Crowd Management System</a>
-      <div class="navbar-nav ms-auto">
-        <a class="nav-link" href="#features">Features</a>
-        <a class="nav-link" href="#uploadVideoSection">Upload</a>
-        <a class="nav-link" href="#about">About</a>
+      <a class="brand-wrap" href="/">
+        <span class="brand-icon">C</span>
+        <span>Crowd Management System</span>
+      </a>
+
+      <!-- Server Connection Badge -->
+      <div class="status-badge ms-3 d-none d-md-inline-flex" id="navConnectionStatus">
+        <span class="status-dot"></span>
+        <span id="navStatusText">ONLINE (CUDA:0)</span>
+      </div>
+
+      <button class="navbar-toggler border-2 border-black" type="button" data-bs-toggle="collapse" data-bs-target="#navContent" aria-controls="navContent" aria-expanded="false" aria-label="Toggle navigation">
+        <i class="bi bi-list fs-3 text-black"></i>
+      </button>
+
+      <div class="collapse navbar-collapse" id="navContent">
+        <div class="navbar-nav ms-auto align-items-lg-center gap-2 mt-3 mt-lg-0">
+          <a class="nav-btn-link" href="#surveillance">Surveillance</a>
+          <a class="nav-btn-link" href="#studio">Video Studio</a>
+          <a class="nav-btn-link" href="#benchmarks">Benchmarks</a>
+          <a class="nav-btn-link" href="#upload">Batch Ingest</a>
+          <a class="nav-btn-link" href="/docs">API Docs</a>
+          <a class="btn-neo btn-neo-yellow ms-lg-2 py-2 px-3 fs-6" href="/live_preview" style="padding: 0.45rem 1.1rem; font-size: 0.88rem;">
+            <i class="bi bi-camera-video me-1"></i>Live Feed
+          </a>
+        </div>
       </div>
     </div>
   </nav>
 
   <!-- Hero Section -->
-  <section class="hero-section">
+  <section class="hero-wrap">
     <div class="container">
       <div class="row align-items-center gy-5">
-        <!-- Hero Text -->
+        
+        <!-- Left Column: Purpose & Actions -->
         <div class="col-lg-6 col-md-12">
-          <div id="heroTextContent" class="hero-text-content text-center text-lg-start">
-            <h1 class="display-4 mb-3">Smart Crowd Management</h1>
-            <p class="mb-4">
-              Advanced AI-powered crowd analysis using YOLO11x for real-time monitoring, heatmap generation, and safety management in public spaces and events.
-            </p>
-            <div class="mb-4">
-              <span class="tech-badge">YOLO11x</span>
-              <span class="tech-badge">Real-time Analysis</span>
-              <span class="tech-badge">Heatmap Generation</span>
-              <span class="tech-badge">Safety Alerts</span>
+          <div class="hero-tag">
+            <i class="bi bi-cpu-fill"></i>
+            <span>ULTRALYTICS YOLO26M · CROWDHUMAN BENCHMARK</span>
+          </div>
+          <h1 class="hero-title">
+            Real-time crowd intelligence and automated safety alerts
+          </h1>
+          <p class="hero-description">
+            Continuous edge pedestrian tracking, spatial density estimation, and sustained overcrowding detection built for venues, transit hubs, and public assemblies.
+          </p>
+
+          <!-- Neo-Brutalism Action Buttons -->
+          <div class="d-flex flex-wrap gap-3">
+            <a href="/live_preview" class="btn-neo btn-neo-yellow">
+              <i class="bi bi-camera-video"></i>
+              <span>Launch Live Surveillance</span>
+            </a>
+            <a href="/video_studio" class="btn-neo btn-neo-cyan">
+              <i class="bi bi-film"></i>
+              <span>Open Video Studio</span>
+            </a>
+          </div>
+
+          <!-- Real System Metadata with Kit Langton Rolling Digits -->
+          <div class="system-meta-bar">
+            <div class="system-meta-item">
+              <span class="system-meta-label">Detection Model</span>
+              <span class="system-meta-value">YOLO26m (50ep)</span>
             </div>
-            <!-- Updated Button Section -->
-            <div class="d-flex flex-wrap justify-content-center justify-content-lg-start">
-              <button class="btn btn-camera action-btn" id="liveCameraBtn">
-                <i class="bi bi-camera-video me-2"></i>Start Live Camera
-              </button>
-              <a href="#uploadVideoSection" class="btn btn-primary action-btn" id="getStartedBtn">
-                <i class="bi bi-upload me-2"></i>Upload Video
+            <div class="system-meta-item">
+              <span class="system-meta-label">Inference Speed</span>
+              <span class="system-meta-value font-mono">
+                <span class="rolling-number-wrap" id="rollInference"></span>
+                <span>ms</span>
+              </span>
+            </div>
+            <div class="system-meta-item">
+              <span class="system-meta-label">mAP@0.50</span>
+              <span class="system-meta-value" style="color: #000;">
+                <span class="rolling-number-wrap" id="rollMap"></span>
+                <span>%</span>
+              </span>
+            </div>
+            <div class="system-meta-item">
+              <span class="system-meta-label">Count Correlation</span>
+              <span class="system-meta-value">
+                <span>R2 = </span>
+                <span class="rolling-number-wrap" id="rollR2"></span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Right Column: Operational Surveillance Console -->
+        <div class="col-lg-6 col-md-12">
+          <div class="console-card">
+            <div class="console-header">
+              <div class="console-header-left">
+                <i class="bi bi-broadcast"></i>
+                <span id="viewportTitle">CAM-01: PERSON BOUNDING BOXES</span>
+              </div>
+              <div class="d-flex gap-2">
+                <button class="feed-toggle-btn active" id="btnFeedBoxes">Boxes</button>
+                <button class="feed-toggle-btn" id="btnFeedHeatmap">Heatmap</button>
+                <button class="feed-toggle-btn" id="btnFeedLive">Live Stream</button>
+              </div>
+            </div>
+
+            <!-- Viewport Image/Stream Container -->
+            <div class="console-viewport">
+              <img id="consoleImage" src="/static/processed/live_feed_boxes_fixed.jpg" alt="Surveillance Feed"/>
+              <div class="viewport-overlay-badge" id="viewportBadge">
+                <span class="font-mono">42 DETECTIONS · RESOLUTION 640px</span>
+              </div>
+              <div class="viewport-overlay-alert" id="viewportAlert">
+                <span>STATUS: SAFE</span>
+              </div>
+            </div>
+
+            <!-- Real Telemetry Footer with Rolling Digits -->
+            <div class="console-footer">
+              <div class="console-stat-pill">
+                <span>Headcount:</span>
+                <strong class="font-mono">
+                  <span class="rolling-number-wrap" id="rollConsoleCount"></span>
+                  <span>people</span>
+                </strong>
+              </div>
+              <div class="console-stat-pill">
+                <span>Density Level:</span>
+                <strong id="consoleDensityVal">High</strong>
+              </div>
+              <div class="console-stat-pill">
+                <span>Threshold:</span>
+                <strong class="font-mono">
+                  <span class="rolling-number-wrap" id="rollThreshold"></span>
+                </strong>
+              </div>
+              <a href="/live_preview" class="module-link small py-1 px-2">
+                <span>Control Room</span>
+                <i class="bi bi-arrow-right"></i>
               </a>
-              <a href="#features" class="btn btn-outline-primary action-btn">Learn More</a>
             </div>
           </div>
         </div>
-        <!-- Hero SVG -->
-        <div class="col-lg-6 col-md-12 d-flex justify-content-center">
-          <div id="heroSvgContainer" class="svg-hero-container">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 512" fill="currentColor" style="width: 280px; height: auto; color: #0d6efd;">
-              <path d="M96 128a128 128 0 1 1 256 0A128 128 0 1 1 96 128zM0 482.3C0 383.8 79.8 304 178.3 304h91.4C368.2 304 448 383.8 448 482.3c0 16.4-13.3 29.7-29.7 29.7H29.7C13.3 512 0 498.7 0 482.3zM472 200a72 72 0 1 1 144 0 72 72 0 1 1 -144 0zM480 512h128c26.5 0 48-21.5 48-48c0-59.6-48.4-108-108-108H532c-59.6 0-108 48.4-108 108c0 26.5 21.5 48 48 48z"/>
-              <circle cx="320" cy="100" r="25" fill="#ffffff" stroke="#0d6efd" stroke-width="3"/>
-              <circle cx="320" cy="100" r="15" fill="#0d6efd"/>
-              <path d="M305 85 L335 85 L340 75 L300 75 Z" fill="#0d6efd"/>
-            </svg>
-          </div>
-        </div>
+
       </div>
     </div>
   </section>
 
-  <!-- Stats Section -->
-  <section class="stats-section">
+  <!-- Core Modules Section -->
+  <section class="section-wrap" id="surveillance">
     <div class="container">
-      <div class="row text-center">
-        <div class="col-md-3 col-6 mb-4">
-          <div class="stat-item">
-            <span class="stat-number" data-count="92.7">0</span>
-            <span>Accuracy Rate</span>
+      <div class="section-header">
+        <h2>Operations and Capabilities</h2>
+        <p>A unified computer vision platform built around authentic surveillance workflows.</p>
+      </div>
+
+      <div class="row g-4">
+        <!-- Module 1: Live CCTV -->
+        <div class="col-lg-4 col-md-6">
+          <div class="module-card">
+            <div>
+              <span class="module-badge" style="background: var(--neo-lime);">MODULE 01</span>
+              <h3>Live Camera Surveillance</h3>
+              <p>
+                Continuous looping CCTV stream with single-pass ByteTrack tracking, collision-free text labels, dynamic thermal density heatmaps, and coordinate grid magnification.
+              </p>
+            </div>
+            <div>
+              <a href="/live_preview" class="module-link">
+                <span>Launch Live Feed</span>
+                <i class="bi bi-arrow-right"></i>
+              </a>
+            </div>
           </div>
         </div>
-        <div class="col-md-3 col-6 mb-4">
-          <div class="stat-item">
-            <span class="stat-number" data-count="2100">0</span>
-            <span>Model Trained on Images+</span>
+
+        <!-- Module 2: Video Studio -->
+        <div class="col-lg-4 col-md-6">
+          <div class="module-card" id="studio">
+            <div>
+              <span class="module-badge" style="background: var(--neo-cyan);">MODULE 02</span>
+              <h3>Video Processing Studio</h3>
+              <p>
+                Finite batch video processing with real-time MJPEG progress telemetry, frame-by-frame stats (FPS, progress percentage, ETA), and automated web-playable H.264 video storage.
+              </p>
+            </div>
+            <div>
+              <a href="/video_studio" class="module-link">
+                <span>Open Video Studio</span>
+                <i class="bi bi-arrow-right"></i>
+              </a>
+            </div>
           </div>
         </div>
-        <div class="col-md-3 col-6 mb-4">
-          <div class="stat-item">
-            <span class="stat-number" data-count="42">0</span>
-            <span>Events Monitored</span>
-          </div>
-        </div>
-        <div class="col-md-3 col-6 mb-4">
-          <div class="stat-item">
-            <span class="stat-number" data-count="24">0</span>
-            <span>Hours Real-time</span>
+
+        <!-- Module 3: Sustained Alerts -->
+        <div class="col-lg-4 col-md-6">
+          <div class="module-card">
+            <div>
+              <span class="module-badge" style="background: var(--neo-pink);">MODULE 03</span>
+              <h3>Sustained Alert Engine</h3>
+              <p>
+                Triggers alarms only upon sustained overcrowding (breach duration >= 3.0 seconds) with an enforced 30-second cooldown period, Web Audio siren synthesizer, and SSRF-hardened webhook dispatches.
+              </p>
+            </div>
+            <div>
+              <a href="/live_preview" class="module-link">
+                <span>Configure Thresholds</span>
+                <i class="bi bi-arrow-right"></i>
+              </a>
+            </div>
           </div>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- Features Section -->
-  <section id="features" class="container py-5 my-5">
-    <div class="text-center mb-5">
-      <h2 class="display-5 fw-bold text-primary mb-3">Powerful Features</h2>
-      <p class="lead text-muted">Comprehensive crowd analysis tools for enhanced safety and management</p>
-    </div>
-    <div class="row g-4">
-      <div class="col-lg-4 col-md-6">
-        <div class="feature-card">
-          <div class="feature-icon">
-            <i class="bi bi-camera-video"></i>
-          </div>
-          <h4 class="fw-bold mb-3">Real-time Monitoring</h4>
-          <p class="text-muted">Live video analysis with instant crowd density detection and movement tracking using advanced YOLO11x algorithms.</p>
-        </div>
-      </div>
-      <div class="col-lg-4 col-md-6">
-        <div class="feature-card">
-          <div class="feature-icon">
-            <i class="bi bi-thermometer-half"></i>
-          </div>
-          <h4 class="fw-bold mb-3">Heatmap Generation</h4>
-          <p class="text-muted">Visual density maps showing crowd concentration patterns and high-traffic areas for better space management.</p>
-        </div>
-      </div>
-      <div class="col-lg-4 col-md-6">
-        <div class="feature-card">
-          <div class="feature-icon">
-            <i class="bi bi-shield-check"></i>
-          </div>
-          <h4 class="fw-bold mb-3">Safety Alerts</h4>
-          <p class="text-muted">Automated alerts for overcrowding, unusual behavior patterns, and potential safety risks in real-time.</p>
-        </div>
-      </div>
-      <div class="col-lg-4 col-md-6">
-        <div class="feature-card">
-          <div class="feature-icon">
-            <i class="bi bi-graph-up"></i>
-          </div>
-          <h4 class="fw-bold mb-3">Analytics Dashboard</h4>
-          <p class="text-muted">Comprehensive analytics with detailed reports, trends, and insights for data-driven decision making.</p>
-        </div>
-      </div>
-      <div class="col-lg-4 col-md-6">
-        <div class="feature-card">
-          <div class="feature-icon">
-            <i class="bi bi-people"></i>
-          </div>
-          <h4 class="fw-bold mb-3">Crowd Tracking</h4>
-          <p class="text-muted">Individual and group movement tracking with path analysis and behavioral pattern recognition.</p>
-        </div>
-      </div>
-      <div class="col-lg-4 col-md-6">
-        <div class="feature-card">
-          <div class="feature-icon">
-            <i class="bi bi-lightning"></i>
-          </div>
-          <h4 class="fw-bold mb-3">Fast Processing</h4>
-          <p class="text-muted">High-speed video processing with minimal latency for immediate results and rapid response capabilities.</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Upload Section -->
-  <section id="uploadVideoSection" class="container py-5 my-4">
-    <div class="upload-card mx-auto" style="max-width: 600px;">
-      <h2 class="mb-4 text-center">Upload Video for Crowd Analysis</h2>
-      <div class="mb-3">
-        <label for="videoInput" class="form-label fs-5">Select Video File</label>
-        <input type="file" accept="video/*" class="form-control form-control-lg" id="videoInput"/>
-        <div class="form-text">Supported formats: MP4, MOV, AVI (Max size: 100MB)</div>
-      </div>
-      <video id="videoPreview" controls class="w-100 rounded mb-3" style="display: none;"></video>
-      <button class="btn btn-primary w-100 py-2 fs-5 action-btn" id="uploadBtn">
-        <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true" style="display: none;"></span>
-        Upload & Analyze
-      </button>
-      <div class="mt-3 text-center status-message" id="uploadStatus"></div>
-    </div>
-  </section>
-
-  <!-- About Section -->
-  <section id="about" class="bg-light py-5">
+  <!-- Empirical Benchmark Validation -->
+  <section class="section-wrap" id="benchmarks">
     <div class="container">
-      <div class="row align-items-center">
-        <div class="col-lg-6">
-          <h2 class="display-6 fw-bold text-primary mb-4">About Our Technology</h2>
-          <p class="lead mb-4">Our crowd management system leverages cutting-edge AI technology to provide comprehensive crowd analysis and safety monitoring solutions.</p>
-          <div class="row">
-            <div class="col-6 mb-3">
-              <h5 class="fw-bold">AI-Powered</h5>
-              <p class="text-muted small">Advanced machine learning algorithms</p>
-            </div>
-            <div class="col-6 mb-3">
-              <h5 class="fw-bold">Real-time</h5>
-              <p class="text-muted small">Instant analysis and alerts</p>
-            </div>
-            <div class="col-6 mb-3">
-              <h5 class="fw-bold">Scalable</h5>
-              <p class="text-muted small">Works for any event size</p>
-            </div>
-            <div class="col-6 mb-3">
-              <h5 class="fw-bold">Accurate</h5>
-              <p class="text-muted small">99.5% detection accuracy</p>
-            </div>
-          </div>
+      <div class="section-header">
+        <h2>CrowdHuman Benchmark Validation</h2>
+        <p>Trained for 50 full epochs on an NVIDIA RTX 4050 GPU across 99,481 full-body person annotations.</p>
+      </div>
+
+      <div class="benchmark-table-card">
+        <table class="table-dark-custom">
+          <thead>
+            <tr>
+              <th>Evaluation Metric</th>
+              <th>Stock Baseline</th>
+              <th>Fine-Tuned YOLO26m (50 Epochs)</th>
+              <th>Measured Improvement</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><strong>Count R2 Score</strong></td>
+              <td class="font-mono text-muted">-0.0710</td>
+              <td class="font-mono fw-bold">
+                <span class="rolling-number-wrap" id="rollR2Table"></span>
+              </td>
+              <td><span class="delta-badge-pos">+0.6956 Positive Fit</span></td>
+            </tr>
+            <tr>
+              <td><strong>Count Root Mean Squared Error (RMSE)</strong></td>
+              <td class="font-mono text-muted">23.08 people</td>
+              <td class="font-mono fw-bold">
+                <span class="rolling-number-wrap" id="rollRmseTable"></span>
+                <span> people</span>
+              </td>
+              <td><span class="delta-badge-pos">-40.8% Error Reduction</span></td>
+            </tr>
+            <tr>
+              <td><strong>Count Mean Absolute Error (MAE)</strong></td>
+              <td class="font-mono text-muted">9.59 people</td>
+              <td class="font-mono fw-bold">
+                <span class="rolling-number-wrap" id="rollMaeTable"></span>
+                <span> people</span>
+              </td>
+              <td><span class="delta-badge-pos">-45.0% Error Reduction</span></td>
+            </tr>
+            <tr>
+              <td><strong>Count Mean Bias</strong></td>
+              <td class="font-mono text-muted">-8.50 people</td>
+              <td class="font-mono fw-bold">+4.09 people</td>
+              <td><span class="delta-badge-pos">Eliminated Undercounting</span></td>
+            </tr>
+            <tr>
+              <td><strong>Detection mAP@0.50</strong></td>
+              <td class="font-mono text-muted">53.67%</td>
+              <td class="font-mono fw-bold">
+                <span class="rolling-number-wrap" id="rollMapTable"></span>
+                <span>%</span>
+              </td>
+              <td><span class="delta-badge-pos">+33.61% Absolute Surge</span></td>
+            </tr>
+            <tr>
+              <td><strong>Detection Precision</strong></td>
+              <td class="font-mono text-muted">64.88%</td>
+              <td class="font-mono fw-bold">
+                <span class="rolling-number-wrap" id="rollPrecTable"></span>
+                <span>%</span>
+              </td>
+              <td><span class="delta-badge-pos">+22.99% Gain</span></td>
+            </tr>
+            <tr>
+              <td><strong>Detection Recall</strong></td>
+              <td class="font-mono text-muted">50.03%</td>
+              <td class="font-mono fw-bold">
+                <span class="rolling-number-wrap" id="rollRecallTable"></span>
+                <span>%</span>
+              </td>
+              <td><span class="delta-badge-pos">+28.41% Gain</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- Batch Video Ingestion Station -->
+  <section class="section-wrap" id="upload">
+    <div class="container">
+      <div class="section-header">
+        <h2>Batch Video Ingestion</h2>
+        <p>Drop a surveillance recording to initiate batch detection, density tracking, and web transcoding.</p>
+      </div>
+
+      <div class="ingest-box" id="dropzoneBox">
+        <input type="file" id="videoFileInput" accept=".mp4,.avi,.mov,.mkv" style="display: none;"/>
+        <div class="ingest-icon">
+          <i class="bi bi-cloud-arrow-up"></i>
         </div>
-        <div class="col-lg-6">
-          <div class="bg-white p-4 rounded-3 shadow">
-            <h5 class="fw-bold mb-3">Use Cases</h5>
-            <ul class="list-unstyled">
-              <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Concert & Festival Management</li>
-              <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Shopping Mall Monitoring</li>
-              <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Airport & Station Security</li>
-              <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Sports Event Safety</li>
-              <li class="mb-2"><i class="bi bi-check-circle text-success me-2"></i>Emergency Evacuation Planning</li>
-            </ul>
-          </div>
+        <h4 class="fs-4 fw-bold mb-1">Select or drop video file</h4>
+        <p class="text-muted small mb-3">Supported Formats: .mp4, .avi, .mov, .mkv (Maximum size: 250 MB)</p>
+        
+        <div>
+          <button type="button" class="btn-neo btn-neo-yellow" id="btnBrowseDropzone">
+            <i class="bi bi-upload"></i>
+            <span>Browse Video File</span>
+          </button>
         </div>
+
+        <div class="progress-bar-wrap" id="uploadProgressWrap">
+          <div class="progress-bar-fill" id="uploadProgressFill"></div>
+        </div>
+        <div class="font-mono small mt-2" id="uploadStatusText" style="min-height: 1.2rem; font-weight: 700;"></div>
       </div>
     </div>
   </section>
 
   <!-- Footer -->
-  <footer class="footer text-center py-4">
+  <footer class="cms-footer">
     <div class="container">
-      <p class="mb-0">&copy; 2025 Crowd Management System. AI-Powered Safety Solutions.</p>
+      <div class="d-flex flex-wrap align-items-center justify-content-between gap-3">
+        <div>
+          <strong>Crowd Management System</strong> · Real-Time Edge Vision Platform
+        </div>
+        <div class="d-flex flex-wrap">
+          <a class="footer-link" href="/live_preview">Live Feed</a>
+          <a class="footer-link" href="/video_studio">Video Studio</a>
+          <a class="footer-link" href="/docs">OpenAPI Documentation</a>
+        </div>
+      </div>
     </div>
   </footer>
 
+  <!-- Bootstrap Bundle -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <!-- Client Scripting -->
   <script>
-    gsap.registerPlugin(ScrollTrigger);
+    // =========================================================================
+    // 1. getlayers.ai Fluid Follower Cursor Implementation
+    // =========================================================================
+    const cursorDot = document.getElementById('cursorDot');
+    const cursorFollower = document.getElementById('cursorFollower');
 
-    window.addEventListener('DOMContentLoaded', () => {
-      // Hero Text Animation
-      gsap.from("#heroTextContent > *", {
-        opacity: 0,
-        y: 30,
-        duration: 0.7,
-        stagger: 0.2,
-        ease: "power2.out"
+    if (cursorDot && cursorFollower && window.matchMedia('(pointer: fine)').matches) {
+      let mouseX = -100, mouseY = -100;
+      let followerX = -100, followerY = -100;
+
+      window.addEventListener('mousemove', e => {
+        mouseX = e.clientX;
+        mouseY = e.clientY;
+        cursorDot.style.left = `${mouseX}px`;
+        cursorDot.style.top = `${mouseY}px`;
       });
 
-      // Hero SVG Animation
-      gsap.from("#heroSvgContainer", {
-        opacity: 0,
-        scale: 0.85,
-        duration: 1,
-        delay: 0.4,
-        ease: "elastic.out(1, 0.75)"
-      });
+      function renderCursor() {
+        followerX += (mouseX - followerX) * 0.18;
+        followerY += (mouseY - followerY) * 0.18;
+        cursorFollower.style.left = `${followerX}px`;
+        cursorFollower.style.top = `${followerY}px`;
+        requestAnimationFrame(renderCursor);
+      }
+      requestAnimationFrame(renderCursor);
 
-      // Stats Counter Animation
-      gsap.utils.toArray('.stat-number').forEach(stat => {
-        const target = stat.getAttribute('data-count');
-        gsap.to(stat, {
-          innerText: target,
-          duration: 2,
-          ease: "power2.out",
-          snap: { innerText: 1 },
-          scrollTrigger: {
-            trigger: stat,
-            start: "top 80%",
-            toggleActions: "play none none none"
-          },
-          onUpdate: function () {
-            if (target.includes('.')) {
-              stat.innerText = Number(stat.innerText).toFixed(1);
-            }
+      const hoverTargets = document.querySelectorAll(
+        'a, button, .btn-neo, .btn-liquid-metal, .module-card, .feed-toggle-btn, .ingest-box'
+      );
+      hoverTargets.forEach(el => {
+        el.addEventListener('mouseenter', () => cursorFollower.classList.add('hovering'));
+        el.addEventListener('mouseleave', () => cursorFollower.classList.remove('hovering'));
+      });
+    }
+
+    // =========================================================================
+    // 2. Vengeance UI Specular Light Coordinates Mouse Tracking
+    // =========================================================================
+    document.querySelectorAll('.btn-neo, .btn-liquid-metal').forEach(btn => {
+      btn.addEventListener('mousemove', e => {
+        const rect = btn.getBoundingClientRect();
+        const x = ((e.clientX - rect.left) / rect.width) * 100;
+        const y = ((e.clientY - rect.top) / rect.height) * 100;
+        btn.style.setProperty('--mouse-x', `${x}%`);
+        btn.style.setProperty('--mouse-y', `${y}%`);
+      });
+    });
+
+    // =========================================================================
+    // 3. Kit Langton Rolling Number Reels
+    // =========================================================================
+    function createRollingNumber(container, value) {
+      if (!container) return;
+      container.innerHTML = '';
+      const str = String(value);
+
+      for (const ch of str) {
+        if (ch >= '0' && ch <= '9') {
+          const reel = document.createElement('span');
+          reel.className = 'rolling-digit-reel';
+          for (let i = 0; i <= 9; i++) {
+            const digit = document.createElement('span');
+            digit.className = 'rolling-digit';
+            digit.textContent = i;
+            reel.appendChild(digit);
           }
+          container.appendChild(reel);
+          const target = parseInt(ch, 10);
+          reel.style.transform = 'translateY(0%)';
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              reel.style.transform = `translateY(-${target * 10}%)`;
+            });
+          });
+        } else {
+          const charSpan = document.createElement('span');
+          charSpan.className = 'rolling-char';
+          charSpan.textContent = ch;
+          container.appendChild(charSpan);
+        }
+      }
+    }
+
+    function updateRollingNumber(container, newValue) {
+      if (!container) return;
+      const reels = container.querySelectorAll('.rolling-digit-reel');
+      const digits = String(newValue).replace(/[^0-9]/g, '');
+
+      if (reels.length !== digits.length) {
+        createRollingNumber(container, newValue);
+        return;
+      }
+
+      let digitIdx = 0;
+      for (const ch of String(newValue)) {
+        if (ch >= '0' && ch <= '9') {
+          const target = parseInt(ch, 10);
+          reels[digitIdx].style.transform = `translateY(-${target * 10}%)`;
+          digitIdx++;
+        }
+      }
+    }
+
+    // Initialize static benchmark rolling numbers
+    createRollingNumber(document.getElementById('rollInference'), '18.2');
+    createRollingNumber(document.getElementById('rollMap'), '87.28');
+    createRollingNumber(document.getElementById('rollR2'), '0.6246');
+    createRollingNumber(document.getElementById('rollConsoleCount'), '42');
+    createRollingNumber(document.getElementById('rollThreshold'), '15');
+
+    createRollingNumber(document.getElementById('rollR2Table'), '0.6246');
+    createRollingNumber(document.getElementById('rollRmseTable'), '13.67');
+    createRollingNumber(document.getElementById('rollMaeTable'), '5.27');
+    createRollingNumber(document.getElementById('rollMapTable'), '87.28');
+    createRollingNumber(document.getElementById('rollPrecTable'), '87.87');
+    createRollingNumber(document.getElementById('rollRecallTable'), '78.44');
+
+    // =========================================================================
+    // 4. Console Viewport Feed Switcher (Real Assets)
+    // =========================================================================
+    const btnFeedBoxes = document.getElementById('btnFeedBoxes');
+    const btnFeedHeatmap = document.getElementById('btnFeedHeatmap');
+    const btnFeedLive = document.getElementById('btnFeedLive');
+    const consoleImage = document.getElementById('consoleImage');
+    const viewportTitle = document.getElementById('viewportTitle');
+    const viewportBadge = document.getElementById('viewportBadge');
+
+    function setActiveToggle(btn) {
+      [btnFeedBoxes, btnFeedHeatmap, btnFeedLive].forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+    }
+
+    if (btnFeedBoxes) {
+      btnFeedBoxes.addEventListener('click', () => {
+        setActiveToggle(btnFeedBoxes);
+        consoleImage.src = '/static/processed/live_feed_boxes_fixed.jpg';
+        viewportTitle.textContent = 'CAM-01: PERSON BOUNDING BOXES';
+        viewportBadge.textContent = '42 DETECTIONS · RESOLUTION 640px';
+      });
+    }
+
+    if (btnFeedHeatmap) {
+      btnFeedHeatmap.addEventListener('click', () => {
+        setActiveToggle(btnFeedHeatmap);
+        consoleImage.src = '/static/processed/live_feed_heatmap_fixed.jpg';
+        viewportTitle.textContent = 'CAM-01: GAUSSIAN THERMAL DENSITY';
+        viewportBadge.textContent = 'HEATMAP DIFFUSION · RESOLUTION 640px';
+      });
+    }
+
+    if (btnFeedLive) {
+      btnFeedLive.addEventListener('click', () => {
+        setActiveToggle(btnFeedLive);
+        consoleImage.src = '/video_feed';
+        viewportTitle.textContent = 'CAM-01: LIVE SURVEILLANCE FEED';
+        viewportBadge.textContent = 'STREAMING LIVE (MJPEG)';
+      });
+    }
+
+    // =========================================================================
+    // 5. Heartbeat & Live Stats Polling with Kit Langton Digits
+    // =========================================================================
+    async function fetchLiveStats() {
+      try {
+        const res = await fetch('/camera_stats');
+        if (res.ok) {
+          const stats = await res.json();
+          const count = stats.people_count || 0;
+          const density = stats.density_level || 'None';
+          const threshold = stats.alert_threshold || 15;
+          const statusText = stats.alert_status || 'Safe';
+
+          const densityVal = document.getElementById('consoleDensityVal');
+          const alertBadge = document.getElementById('viewportAlert');
+          const navText = document.getElementById('navStatusText');
+
+          if (count > 0) {
+            updateRollingNumber(document.getElementById('rollConsoleCount'), String(count));
+          }
+          updateRollingNumber(document.getElementById('rollThreshold'), String(threshold));
+
+          if (densityVal && density !== 'None') densityVal.textContent = density;
+          if (alertBadge) {
+            alertBadge.textContent = `STATUS: ${statusText.toUpperCase()}`;
+            alertBadge.style.backgroundColor = statusText === 'Alert' ? 'var(--neo-red)' : 'var(--neo-lime)';
+          }
+          if (navText) {
+            navText.textContent = count > 0 ? `LIVE (${count} ACTIVE)` : 'ONLINE (CUDA:0)';
+          }
+        }
+      } catch (err) {
+        // Fallback gracefully
+      }
+    }
+    fetchLiveStats();
+    setInterval(fetchLiveStats, 5000);
+
+    // =========================================================================
+    // 6. Batch Video Ingestion Station
+    // =========================================================================
+    const dropzoneBox = document.getElementById('dropzoneBox');
+    const videoFileInput = document.getElementById('videoFileInput');
+    const btnBrowseDropzone = document.getElementById('btnBrowseDropzone');
+    const uploadProgressWrap = document.getElementById('uploadProgressWrap');
+    const uploadProgressFill = document.getElementById('uploadProgressFill');
+    const uploadStatusText = document.getElementById('uploadStatusText');
+
+    if (btnBrowseDropzone && videoFileInput) {
+      btnBrowseDropzone.addEventListener('click', (e) => {
+        e.stopPropagation();
+        videoFileInput.click();
+      });
+    }
+
+    if (dropzoneBox && videoFileInput) {
+      dropzoneBox.addEventListener('click', () => videoFileInput.click());
+
+      ['dragenter', 'dragover'].forEach(name => {
+        dropzoneBox.addEventListener(name, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropzoneBox.classList.add('dragover');
         });
       });
 
-      // Feature Cards Animation
-      gsap.from(".feature-card", {
-        opacity: 0,
-        y: 50,
-        duration: 0.6,
-        stagger: 0.1,
-        scrollTrigger: {
-          trigger: "#features",
-          start: "top 70%",
-          toggleActions: "play none none none"
-        }
+      ['dragleave', 'drop'].forEach(name => {
+        dropzoneBox.addEventListener(name, (e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          dropzoneBox.classList.remove('dragover');
+        });
       });
 
-      // Upload Section Animation
-      gsap.from("#uploadVideoSection .upload-card", {
-        opacity: 0,
-        y: 50,
-        duration: 0.8,
-        scrollTrigger: {
-          trigger: "#uploadVideoSection",
-          start: "top 80%",
-          toggleActions: "play none none none"
-        }
+      dropzoneBox.addEventListener('drop', (e) => {
+        const files = e.dataTransfer.files;
+        if (files.length > 0) handleUpload(files[0]);
       });
-    });
 
-    // Live Camera Button Handler
-    document.getElementById('liveCameraBtn').addEventListener('click', function() {
-      gsap.to(this, { scale: 0.95, duration: 0.1, yoyo: true, repeat: 1 });
-      
-      // Show loading state
-      this.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Starting Camera...';
-      this.disabled = true;
-      
-      // Redirect to live camera page
-      setTimeout(() => {
-        window.location.href = '/live_camera';
-      }, 1000);
-    });
+      videoFileInput.addEventListener('change', (e) => {
+        if (e.target.files.length > 0) handleUpload(e.target.files[0]);
+      });
+    }
 
-    const videoInput = document.getElementById('videoInput');
-    const videoPreview = document.getElementById('videoPreview');
-    const uploadBtn = document.getElementById('uploadBtn');
-    const uploadStatus = document.getElementById('uploadStatus');
-    const spinner = uploadBtn.querySelector('.spinner-border');
+    async function handleUpload(file) {
+      if (!file) return;
 
-    videoInput.addEventListener('change', function(event) {
-      const file = event.target.files[0];
-      if (file && file.type.startsWith('video/')) {
-        const url = URL.createObjectURL(file);
-        videoPreview.src = url;
-        videoPreview.style.display = 'block';
-        uploadStatus.textContent = 'Video selected. Ready to analyze.';
-        uploadStatus.className = 'mt-3 text-center status-message text-muted';
-        gsap.fromTo(videoPreview, {opacity:0, height: 0}, {opacity:1, height: 'auto', duration: 0.4, ease: 'power1.out'});
-      } else {
-        videoPreview.src = '';
-        videoPreview.style.display = 'none';
-        if (file) {
-          uploadStatus.textContent = 'Invalid file. Please select a video (MP4, MOV, AVI).';
-          uploadStatus.className = 'mt-3 text-center status-message text-danger fw-bold';
-        } else {
-          uploadStatus.textContent = '';
-          uploadStatus.className = 'mt-3 text-center status-message';
-        }
-      }
-    });
-
-    uploadBtn.addEventListener('click', async () => {
-      const file = videoInput.files[0];
-      if (!file) {
-        uploadStatus.textContent = 'Please select a video file first!';
-        uploadStatus.className = 'mt-3 text-center status-message text-danger fw-bold';
-        gsap.fromTo(uploadStatus, {x: -8}, {x: 8, duration: 0.07, yoyo: true, repeat: 5, ease: 'power1.inOut', clearProps:"x"});
+      const allowedExts = ['.mp4', '.avi', '.mov', '.mkv'];
+      const ext = '.' + file.name.split('.').pop().toLowerCase();
+      if (!allowedExts.includes(ext)) {
+        uploadStatusText.textContent = 'Invalid format. Allowed: .mp4, .avi, .mov, .mkv';
+        uploadStatusText.style.color = 'var(--neo-red)';
         return;
       }
-      if (!file.type.startsWith('video/')) {
-        uploadStatus.textContent = 'Invalid file type. Please select a video.';
-        uploadStatus.className = 'mt-3 text-center status-message text-danger fw-bold';
+
+      const MAX_BYTES = 250 * 1024 * 1024;
+      if (file.size > MAX_BYTES) {
+        uploadStatusText.textContent = 'File exceeds maximum 250 MB size limit.';
+        uploadStatusText.style.color = 'var(--neo-red)';
         return;
       }
+
+      uploadStatusText.textContent = `Uploading ${file.name}...`;
+      uploadStatusText.style.color = 'var(--neo-black)';
+      uploadProgressWrap.style.display = 'block';
+      uploadProgressFill.style.width = '35%';
 
       const formData = new FormData();
       formData.append('video', file);
 
-      uploadStatus.textContent = 'Processing video... Analyzing crowd patterns.';
-      uploadStatus.className = 'mt-3 text-center status-message text-info';
-      spinner.style.display = 'inline-block';
-      uploadBtn.disabled = true;
-      gsap.to(uploadBtn, { y: -2, boxShadow: "0 4px 10px rgba(0,123,255,0.2)", duration: 0.1});
-
       try {
+        uploadProgressFill.style.width = '70%';
         const response = await fetch('/upload', {
           method: 'POST',
           body: formData,
         });
 
         if (response.ok) {
-          const result = await response.json();
-          uploadStatus.textContent = "Upload successful! Opening Video Processing Studio...";
-          uploadStatus.className = 'mt-3 text-center status-message text-success fw-bold';
-          gsap.fromTo(uploadStatus, {scale: 0.9, opacity:0}, {scale: 1, opacity:1, duration: 0.4, ease: 'back.out(1.7)'});
+          uploadProgressFill.style.width = '100%';
+          uploadStatusText.textContent = 'Upload complete. Redirecting to Video Studio...';
+          uploadStatusText.style.color = 'var(--neo-black)';
           setTimeout(() => {
-            window.location.href = result.redirect_url || '/video_studio';
-          }, 800);
+            window.location.href = '/video_studio';
+          }, 600);
         } else {
-          const errorResult = await response.json().catch(() => ({ detail: "Server error. Please try again." }));
-          uploadStatus.textContent = `Error ${response.status}: ${errorResult.detail || response.statusText}`;
-          uploadStatus.className = 'mt-3 text-center status-message text-danger fw-bold';
+          const errData = await response.json().catch(() => ({ detail: 'Upload error' }));
+          uploadStatusText.textContent = `Error ${response.status}: ${errData.detail || 'Upload failed'}`;
+          uploadStatusText.style.color = 'var(--neo-red)';
+          uploadProgressFill.style.width = '0%';
         }
-      } catch (error) {
-        console.error('Upload Error:', error);
-        uploadStatus.textContent = 'Upload failed. Check your connection and try again.';
-        uploadStatus.className = 'mt-3 text-center status-message text-danger fw-bold';
-      } finally {
-        spinner.style.display = 'none';
-        uploadBtn.disabled = false;
-        gsap.to(uploadBtn, { y: 0, boxShadow: "0 10px 20px rgba(0,123,255,0.2)", duration: 0.2});
+      } catch (err) {
+        uploadStatusText.textContent = 'Network connection error.';
+        uploadStatusText.style.color = 'var(--neo-red)';
+        uploadProgressFill.style.width = '0%';
       }
-    });
-
-    document.getElementById('getStartedBtn').addEventListener('click', function(e) {
-      e.preventDefault();
-      document.getElementById('uploadVideoSection').scrollIntoView({ behavior: 'smooth', block: 'start' });
-      gsap.to(this, { y: -2, duration: 0.1, yoyo: true, repeat: 1, ease: 'power1.inOut'});
-    });
-
-    // Smooth scrolling for navbar links
-    document.querySelectorAll('a[href^="#"]').forEach(anchor => {
-      anchor.addEventListener('click', function (e) {
-        e.preventDefault();
-        const target = document.querySelector(this.getAttribute('href'));
-        if (target) {
-          target.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      });
-    });
+    }
   </script>
 </body>
 </html>

@@ -9,6 +9,12 @@ def test_index_page():
     response = client.get("/")
     assert response.status_code == 200
     assert "html" in response.headers.get("content-type", "")
+    content = response.text
+    assert "Crowd Management System" in content
+    assert "YOLO26m" in content
+    assert "Inter" in content
+    assert "consoleImage" in content
+    assert "dropzoneBox" in content
 
 
 def test_live_camera_page():

@@ -193,3 +193,127 @@
   5. Automated Security Test Suite:
      - Added `tests/test_security.py` with 5 targeted tests for SSRF blocked IPs, valid webhook URLs, prohibited upload extensions, and snapshot/video path traversal payloads. All 25 tests pass in test suite.
 
+
+## Platform Revamp: Deep Obsidian Theme, Kit Langton Rolling Numbers, getlayers Cursor & Vengeance UI Liquid Metal
+- Visual Theme Architecture:
+  - Unified color scheme across the entire platform (`templates/index.html`, `templates/video_studio.html`, `templates/live_preview.html`):
+    - Deep Obsidian void background: `#06080D`.
+    - Liquid Chrome / elevated card surface: `#101622`.
+    - Brushed Platinum border sheen: `rgba(226, 232, 240, 0.16)`.
+    - Technical accents: `#38BDF8` (Azure Blue), `#10B981` (Emerald), `#F59E0B` (Amber), `#EF4444` (Rose).
+    - Typography: Space Grotesk (Headlines), Plus Jakarta Sans (UI text), and JetBrains Mono (Tabular numerical telemetry).
+- Kit Langton Rolling Number Decimal & Digit Wheels:
+  - Built pure CSS vertical reels (`.rolling-digit-reel`) containing digits 0-9 inside `.rolling-number-wrap`.
+  - Driven by spring kinematics `transition: transform 1.25s cubic-bezier(0.16, 1, 0.3, 1)`.
+  - Non-digit characters (`.`, `%`, `-`) rendered as fixed tabular characters.
+  - Dynamically updates upon receiving incoming data from `/camera_stats` (live detection count and alert threshold) and static evaluation metrics.
+- getlayers.ai Fluid Follower Cursor:
+  - Custom fluid follower dot (`.layers-cursor-dot`) and magnetic follower ring (`.layers-cursor-follower`).
+  - Smooth lerp interpolation: `followerX += (mouseX - followerX) * 0.18`, `followerY += (mouseY - followerY) * 0.18`.
+  - Magnetic target snapping and scale expansion (`.hovering`) over buttons, links, controls, and surveillance containers.
+  - Automatically hidden on touch devices via `@media (pointer: coarse)`.
+- Vengeance UI Modern Liquid Metal Buttons:
+  - Class `.btn-liquid-metal` with brushed metallic gradient background and pill silhouette.
+  - Reactive specular light reflection (`::before`) dynamically positioning radial reflection at `var(--mouse-x)` and `var(--mouse-y)` on cursor movement with `mix-blend-mode: overlay`.
+  - Outer border sheen (`::after`) with linear-gradient mercury platinum highlights.
+- Zero Emojis: Strictly zero emojis across all code, HTML, CSS, JavaScript, and documentation.
+- Test Suite: All 25 automated unit, inference, security, and API tests passing in under 6 seconds.
+
+## Rolling Numbers Alignment Fix & Live Camera Surveillance UI Overhaul
+- Root Cause Diagnosis of Clipped / Missing Numbers:
+  - Container `.rolling-number-wrap` previously had `align-items: center`.
+  - Because `.rolling-digit-reel` has 10 stacked digits (`0-9`), its height is `10 * H`.
+  - Flexbox `align-items: center` centered the 10-digit reel vertically at `(1 - 10)/2 * H = -4.5 * H`.
+  - When translated by `-target * 10%`, the visible portion was `[target + 4.5, target + 5.5]`.
+  - For digits > 5 (e.g. 7, 8, 9), the reel was translated completely outside the `overflow: hidden` bounding box, leaving blank space / tiny specks.
+  - For digits <= 5, the reel was split in half across the middle, displaying two overlapping half-digits.
+- Resolution:
+  - Updated `.rolling-number-wrap` to `align-items: flex-start`, aligning the top of the unshifted reel to `y = 0`.
+  - Enforced strict `height: 1.25em; line-height: 1.25em; vertical-align: -0.18em;` with `flex-shrink: 0` on reels and character spans.
+  - Initialized transforms to `translateY(0%)` before applying target translate in `requestAnimationFrame`.
+  - All numerical metrics across `templates/index.html` and `templates/live_preview.html` now render crisp, complete, and properly animated.
+- Live Camera Surveillance UI Refinements (`templates/live_preview.html`):
+  - Fixed Viewport Truncation: Replaced rigid `height: 100vh` with a fluid responsive flex container (`gap: 1rem; padding-bottom: 3rem;`) preventing any top/bottom clipping.
+  - Native 16:9 Stream Card: Constrained stream viewport to `aspect-ratio: 16 / 9; max-height: 64vh` to eliminate lateral black dead space, wrapped in an obsidian chrome card with a refined red tactical aura on alert instead of harsh 3px neon flashing borders.
+  - 4-Card Telemetry Bar: Replaced raw centered text with 4 elevated glass cards (People Count with Kit Langton rolling digits, Spatial Density pill, Security Protocol status, and Surveillance Uptime).
+  - Tactical Glass Alert Banner: Replaced flat opaque red bar with translucent crimson glassmorphism HUD (`rgba(220, 38, 38, 0.12)`, glowing hazard icon, sleek mute/review buttons).
+  - Unified Command Bar: Logically grouped into Vision Overlays (Heatmap, Resolution), Alert Policy (custom dark slider with cyan thumb, Siren Mute), and Audit/Navigation (Incidents drawer, Webhook config, Dashboard link).
+  - Collapsible Diagnostic Accordion: Clean collapsible card for instructions and diagnostics.
+
+
+
+## Midnight Navy & Cobalt Steel Blue Theme Palette Migration
+- Palette Specification (from Color Hunt design reference):
+  - #112D4E: Deep Midnight Navy (Void & page base background)
+  - #3F72AF: Classic Denim / Cobalt Steel Blue (Primary action buttons, brand badges, active toggles, glowing accents)
+  - #DBE2EF: Soft Ice Blue / Pale Periwinkle (Elevated borders, secondary buttons, muted metadata labels, and subtle surface highlights)
+  - #F9F7F7: Crisp Alabaster / Off-white (Primary headings, high-contrast metrics, follower cursor dot, specular light reflections)
+- Scope of Migration:
+  - templates/index.html: Completely migrated :root variables, radial background gradients, fluid follower cursor, Vengeance UI liquid metal buttons (primary & secondary), console surveillance card, benchmark metrics table, and footer.
+  - templates/video_studio.html: Updated navigation bar, batch progress bar fill, stat cards, video library cards, upload dropzone, and studio action buttons.
+  - templates/live_preview.html: Overhauled 16:9 stream container, 4-card telemetry status widgets, tactical command bar, custom range slider, collapsible diagnostics accordion, incident audit drawer, and snapshot inspection modals.
+  - templates/live_camera.html: Harmonized legacy camera interface with dark Midnight Navy background, elevated cards, and cobalt accents.
+- Verification:
+  - All 25 unit, inference, security, and API tests passed with zero failures in pytest (uv run pytest).
+  - Tested live HTTP endpoints (/, /live_preview, /video_studio, /live_camera) confirming HTTP 200 and 100% color token coverage.
+  - Confirmed strictly zero emojis across all code, markup, and documentation files.
+
+## Sandstone Aquamarine Serenity Theme Palette Migration (Figma Color Schemes)
+- Design Origin:
+  - Selected by user from Figma Website Color Schemes reference (Sandstone aquamarine serenity).
+- Exact 5-Color Figma Palette Specification:
+  - #BC6C50: Sandstone Terracotta / Warm Clay (Primary brand accents, liquid metal action buttons, active indicator borders, slider thumb).
+  - #DDAD9C: Soft Sandstone Peach / Rose Sand (Secondary text, muted labels, subtle warm borders).
+  - #304C53: Deep Slate Aquamarine / Dark Teal (Secondary button background, active nav buttons, mid-depth cards).
+  - #5A2F25: Deep Umber / Roasted Espresso (Button gradient shadow depth, deep warm accents).
+  - #AFE0E7: Soft Pale Aquamarine / Light Mint Cyan (High-contrast telemetry numbers, cursor follower dot, card border sheens, active status glows).
+- Atmospheric Derived Dark Surfaces:
+  - Base Void Background (--bg-void, --bg-dark): #1B2D31 (deep slate-aquamarine derived from #304C53).
+  - Card & Surface (--bg-card, --card-bg): #2B454B and elevated sub-surface #243B40.
+  - High Elevation & Hover: #304C53.
+  - Navigation, Topbars, Drawer Bodies & Footers: #16262A.
+  - Subtle Borders: rgba(175, 224, 231, 0.20) (Pale Aquamarine sheen) and rgba(221, 173, 156, 0.25) (Sandstone Peach).
+- Scope of Reskin Across All 4 Templates:
+  - templates/index.html: Updated root variables, atmospheric radial gradients, getlayers.ai cursor (Pale Aquamarine dot and Warm Clay follower), Vengeance UI liquid metal buttons (molten sandstone to umber gradient with pale aquamarine specular reflection), navbar, console surveillance card, benchmark metrics table, batch dropzone, and footer.
+  - templates/video_studio.html: Updated command navigation, video viewport bar and screen, upload dropzone hover, dual-color progress bar (#BC6C50 to #AFE0E7), telemetry stat cards, stored video library items, and studio buttons.
+  - templates/live_preview.html: Reskinned 16:9 stream container, 4-card telemetry status widgets (with Kit Langton rolling digits in luminous #AFE0E7), tactical command bar, custom range slider with #BC6C50 thumb and #AFE0E7 ring, collapsible diagnostics accordion, incident audit drawer, and modals.
+  - templates/live_camera.html: Harmonized legacy live camera interface with #1B2D31 background, #2B454B card, #243B40 stat card, #AFE0E7 stat numbers, and #16262A navbar.
+- Interactive Component Fidelity:
+  - Kit Langton rolling digit reels, getlayers.ai follower cursor lerp physics, and Vengeance UI liquid metal mouse-tracking specular highlights fully preserved.
+- Quality and Compliance Verification:
+  - Strictly 0 emojis across all code, markup, and markdown files.
+  - All 25 automated tests passed in pytest (uv run pytest).
+  - Verified live HTTP 200 responses on all 4 endpoints (/, /live_preview, /video_studio, /live_camera) with verified color token presence.
+
+## Neo-Brutalism UI Library Design System Revamp
+- Design Inspiration:
+  - Official [Neo-Brutalism UI Library](https://neo-brutalism-ui-library.vercel.app/overview).
+- Design Architecture & Tokens:
+  - Canvas & Background: Warm cream paper canvas (`#FAF7F2`) with subtle radial dot grid (`radial-gradient(#000000 1px, transparent 1px) 24px 24px`).
+  - Structural Outlines: Pitch black borders (`border: 2px solid #000000`, `3px solid #000000`, `4px solid #000000`).
+  - Hard Offset Drop Shadows (Zero blur):
+    - Buttons & Interactive: `box-shadow: 4px 4px 0px #000000;`
+    - Cards & Panels: `box-shadow: 6px 6px 0px #000000;`
+    - Hero & Viewport Bezel: `box-shadow: 8px 8px 0px #000000;`
+    - Badges & Chips: `box-shadow: 2px 2px 0px #000000;`
+  - High-Contrast Color Palette:
+    - Primary Yellow: `#FFE500` (tactile buttons, brand icons, console headers, highlight badges)
+    - Cyan / Electric Sky: `#A6FAFF` (secondary action buttons, telemetry chips, active buttons)
+    - Lime / Tactical Neon: `#B8FF9F` (success indicators, active badges, headcount cards)
+    - Pink / Candy Magenta: `#FFA6F6` (module badges, FPS chips, tag chips)
+    - Coral Red: `#FF9F9F` (alert banners, stop buttons, critical breach highlights)
+    - Clean Surface: `#FFFFFF` (card containers, benchmark tables, modal dialogs)
+    - Deep Ink: `#000000` (all typography, outlines, and drop shadows)
+  - Tactile Mechanical States (Pop & Press):
+    - Normal: `transform: translate(0, 0); box-shadow: 4px 4px 0px #000;`
+    - Hover: `transform: translate(-2px, -2px); box-shadow: 6px 6px 0px #000;`
+    - Active / Pressed: `transform: translate(2px, 2px); box-shadow: 0px 0px 0px #000;`
+- Scope Across All 4 Templates:
+  - `templates/index.html`: Neo-Brutalism navbar, hero typography, tactile buttons with Vengeance UI cursor specular tracking, system metadata cards, operational surveillance console with hard offset shadows, modules grid, benchmark table with yellow header row, and dropzone box.
+  - `templates/video_studio.html`: Tactical command nav, viewport bezel with yellow header and status badges, dual progress bar with black border and yellow fill, color-blocked telemetry boxes (Lime, Cyan, Yellow, Pink), and stored video archive items.
+  - `templates/live_preview.html`: Sector badge headers, 4-card telemetry bar with Kit Langton rolling digits, coral red sustained alert banner, 16:9 flush stream card, tactical command bar with square thumb slider, collapsible diagnostics accordion, and incident drawer.
+  - `templates/live_camera.html`: Harmonized live camera view with bold cards, high-contrast pastel stat chips, black bordered video viewport, and tactile control buttons.
+- Verification & Quality:
+  - Zero emojis across all templates, comments, code, and documentation (verified via automated scanner).
+  - 25/25 automated tests passed in `uv run pytest`.
+  - Uvicorn server actively running in background on port 8000 with live HTTP 200 responses verified on all endpoints.
