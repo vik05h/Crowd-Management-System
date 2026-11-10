@@ -997,8 +997,8 @@
           <i class="bi bi-broadcast"></i><span>Simulate Drill</span>
         </button>
 
-        <button class="toggle-btn" id="hardwareBtn" onclick="openHardwareModal()" title="Hardware acceleration, GPU profiles, and TensorRT">
-          <i class="bi bi-cpu"></i><span id="hardwareBtnText">Acceleration</span>
+        <button class="toggle-btn" id="hardwareBtn" onclick="openHardwareModal()" title="Performance and processing profiles">
+          <i class="bi bi-cpu"></i><span id="hardwareBtnText">Profiles</span>
         </button>
 
         <button class="toggle-btn" onclick="openIncidentDrawer()">
@@ -1080,14 +1080,14 @@
   <div id="hardwareModal" class="modal">
     <div class="modal-content" style="max-width: 680px;">
       <div class="modal-header">
-        <h5 class="modal-title font-mono fw-bold"><i class="bi bi-cpu me-2"></i>HARDWARE ACCELERATION & MODEL PROFILES</h5>
+        <h5 class="modal-title font-mono fw-bold"><i class="bi bi-cpu me-2"></i>PERFORMANCE & PROCESSING PROFILES</h5>
         <button class="close" onclick="closeHardwareModal()">&times;</button>
       </div>
       <div class="modal-body p-0 py-3">
         <!-- Live Hardware Telemetry Banner -->
         <div class="p-3 mb-3 border-2 border-black rounded" style="background: var(--neo-surface); box-shadow: 3px 3px 0px #000;">
           <div class="d-flex justify-content-between align-items-center mb-2">
-            <span class="small font-mono fw-bold text-uppercase" id="hwGpuName">NVIDIA GEFORCE RTX 4050</span>
+            <span class="small font-mono fw-bold text-uppercase" id="hwEngineName">PROCESSING ENGINE</span>
             <span class="badge border-2 border-black font-mono" id="hwProfileBadge" style="background: var(--neo-lime); color: #000; box-shadow: 1px 1px 0px #000;">PROFILE: ECO</span>
           </div>
           <div class="row g-2 text-center font-mono small">
@@ -1112,19 +1112,15 @@
 
         <!-- Tiered Hardware Presets -->
         <div class="mb-3">
-          <label class="form-label small fw-bold text-black font-mono">1-CLICK HARDWARE PRESETS</label>
+          <label class="form-label small fw-bold text-black font-mono">1-CLICK PROCESSING PRESETS</label>
           <div class="d-flex gap-2 flex-wrap">
             <button class="btn-neo py-2 px-3 flex-fill" id="presetEcoBtn" onclick="applyHardwareProfile('eco')">
-              <div class="fw-bold">Eco / Laptop GPU</div>
-              <div class="text-muted" style="font-size: 0.7rem;">RTX 3050/4050 · 640px · Stride 2</div>
+              <div class="fw-bold">Eco</div>
+              <div class="text-muted" style="font-size: 0.7rem;">Fast · 640px · Stride 2</div>
             </button>
             <button class="btn-neo py-2 px-3 flex-fill" id="presetBalancedBtn" onclick="applyHardwareProfile('balanced')">
-              <div class="fw-bold">Balanced</div>
-              <div class="text-muted" style="font-size: 0.7rem;">RTX 4060/4070 · 640px · Stride 1</div>
-            </button>
-            <button class="btn-neo py-2 px-3 flex-fill" id="presetUltraBtn" onclick="applyHardwareProfile('ultra')">
-              <div class="fw-bold">Ultra High-End GPU</div>
-              <div class="text-muted" style="font-size: 0.7rem;">RTX 4080/4090/A100 · 1024px</div>
+              <div class="fw-bold">Balanced (Quality)</div>
+              <div class="text-muted" style="font-size: 0.7rem;">Full Fidelity · 640px · Stride 1</div>
             </button>
           </div>
         </div>
@@ -1151,8 +1147,8 @@
 
         <div class="d-flex align-items-center justify-content-between p-2 mb-3 border-2 border-black rounded" style="background: var(--neo-surface);">
           <div>
-            <div class="fw-bold font-mono small">FP16 Half-Precision Tensor Cores</div>
-            <div class="text-muted font-mono" style="font-size: 0.72rem;">Runs model math in 16-bit float on RTX Tensor Cores for ~2x acceleration.</div>
+            <div class="fw-bold font-mono small">FP16 Half-Precision Acceleration</div>
+            <div class="text-muted font-mono" style="font-size: 0.72rem;">Runs model math in 16-bit float for ~2x faster inference.</div>
           </div>
           <div class="form-check form-switch m-0">
             <input class="form-check-input border-2 border-black" type="checkbox" id="hwFp16Switch" onchange="onFp16Toggle(this.checked)" style="width: 2.5em; height: 1.25em;">
@@ -1768,7 +1764,10 @@
         if (!res.ok) return;
         const hw = await res.json();
 
-        document.getElementById('hwGpuName').textContent = hw.gpu_name || 'CPU Host';
+        const engineEl = document.getElementById('hwEngineName');
+        if (engineEl) {
+          engineEl.textContent = hw.gpu_name ? hw.gpu_name.replace(/ (Laptop )?GPU/gi, '') : 'Processing Engine';
+        }
         document.getElementById('hwProfileBadge').textContent = `PROFILE: ${(hw.profile || 'ECO').toUpperCase()}`;
         document.getElementById('hwDetLatency').textContent = `${hw.det_latency_ms || 0} ms`;
         document.getElementById('hwPoseLatency').textContent = `${hw.pose_latency_ms || 0} ms`;
@@ -1781,7 +1780,7 @@
 
         // Highlight preset buttons
         const p = hw.profile || 'eco';
-        ['eco', 'balanced', 'ultra'].forEach(preset => {
+        ['eco', 'balanced'].forEach(preset => {
           const btn = document.getElementById(`preset${preset.charAt(0).toUpperCase() + preset.slice(1)}Btn`);
           if (btn) {
             if (p === preset) {

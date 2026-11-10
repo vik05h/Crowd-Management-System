@@ -84,9 +84,6 @@ class YOLOInference:
         self.frame_lock = threading.Lock()
         self.frame_condition = threading.Condition(self.frame_lock)
         self.latest_jpeg_bytes: Optional[bytes] = None
-        self.stream_width: int = 960
-        self.stream_height: int = 540
-        self.jpeg_quality: int = 75
         self.inference_imgsz: int = 640
 
         # Overcrowding alert parameters
@@ -192,14 +189,8 @@ class YOLOInference:
             self.current_video_path = None
 
     def _publish_frame(self, frame: np.ndarray) -> None:
-        """Encode frame to JPEG once and push to all waiting stream consumers."""
-        h, w = frame.shape[:2]
-        if w != self.stream_width or h != self.stream_height:
-            stream_img = cv2.resize(frame, (self.stream_width, self.stream_height), interpolation=cv2.INTER_LINEAR)
-        else:
-            stream_img = frame
-
-        ret, buf = cv2.imencode(".jpg", stream_img, [cv2.IMWRITE_JPEG_QUALITY, self.jpeg_quality])
+        """Encode frame to JPEG in full native quality and push to all waiting stream consumers."""
+        ret, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
         jpeg_bytes = buf.tobytes() if ret else None
 
         with self.frame_condition:

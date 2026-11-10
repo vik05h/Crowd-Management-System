@@ -60,8 +60,8 @@ CMS is an advanced crowd management platform designed to enhance safety, efficie
 - **Interactive Live On-Stream Sector Calibration & Dwell Analytics:**  
   Configurable multi-vertex polygonal sectors (`cv2.pointPolygonTest`) tracking per-sector occupancy, individual pedestrian dwell times, and sustained capacity breaches. Features an interactive On-Stream Calibration Mode allowing operators to visually drag corner handles directly over live camera footage.
 
-- **Hardware Acceleration & Tiered Scalability Engine:**  
-  Accelerates inference across NVIDIA GPUs using FP16 Tensor Cores and tiered performance profiles: Eco/Laptop (RTX 3050/4050: 640px, Stride 2), Balanced (RTX 4060/4070: 640px, Stride 1), and Ultra (RTX 4080/4090/A100: 1024px, Stride 1), alongside background NVIDIA TensorRT engine compilation.
+- **Hardware Acceleration & Processing Profiles Engine:**  
+  Accelerates inference using FP16 Tensor Core execution and streamlined performance profiles: Eco (Fast: 640px, Stride 2) and Balanced Quality (High Fidelity: 640px, Stride 1), alongside background TensorRT engine compilation.
 
 - **Real-Time WebSocket & SSE Event Bus:**  
   Low-latency bidirectional WebSocket hub (`/ws/events`) with Server-Sent Events (`/api/events/stream`) fallback broadcasting live telemetry, zone occupancy transitions, and emergency safety alerts to all connected operator stations.

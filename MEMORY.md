@@ -420,3 +420,19 @@
   - All 37 unit, integration, and security tests passing in 8.26s with zero failures.
   - Zero emojis across all code, comments, templates, and documentation.
 
+## Full Native Quality Restoration & Processing Profile Refinement
+- User Feedback & Diagnosis:
+  - The downscaled streaming resolution (960x540) did not improve perceptual speed for the user since backend model inference is the primary pacing factor.
+  - The user requested restoring full-quality native video streaming and simplifying presets to Eco and Balanced (Quality), while removing the term "GPU" since the architecture is not GPU-heavy.
+- Architecture Changes:
+  1. Full Native Video Streaming: Restored `_publish_frame()` in `yolo_inference.py` to stream at native 1280x720 resolution with high JPEG quality (`quality=85`), eliminating artificial downscaling while keeping the zero-latency shared memory frame bus.
+  2. Processing Profiles: Streamlined presets to:
+     - **Eco**: 640px, Stride 2 (fast execution).
+     - **Balanced (Quality)**: 640px, Stride 1 (full posture tracking fidelity).
+     - Removed the "Ultra High-End GPU" preset.
+  3. Terminology Neutralization: Replaced all user-facing "GPU" labels with "Processing Engine", "Profiles", and "Acceleration", eliminating misleading hardware claims across modals, buttons, and benchmark descriptions.
+- Test Suite & Status:
+  - Full test suite: 37/37 passed in 8.04s.
+  - Zero emojis across all code, comments, templates, and documentation.
+
+
