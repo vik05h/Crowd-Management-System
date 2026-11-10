@@ -1,0 +1,9 @@
+{
+  "mcpServers": {
+    "obscura": {
+      "type": "stdio",
+      "command": "${LOCALAPPDATA}\\Programs\\obscura\\obscura.exe",
+      "args": ["mcp"]
+    }
+  }
+}

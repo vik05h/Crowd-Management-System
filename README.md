@@ -273,3 +273,67 @@ uv run pytest tests/ -v
 ```
 All 37 unit, integration, and security tests validate API routing, alert engines, dataset bounding box sanitization, batch inference pipelines, SSRF protection, upload validation, PBKDF2 password hashing, JWT authorization, ZoneTracker point-in-polygon containment, PoseEngine execution, hardware acceleration profiles, live on-stream polygon calibration, PrivacyManager face blurring, CSV export engine, multi-camera grid telemetry, and staged incident simulation.
 
+---
+
+## AI Agent Tooling
+
+This project is developed with Claude Code, Codex and Antigravity. The agent tooling below was installed on 2026-11-11 for this project only, so all three agents get the same capabilities here without affecting other projects. Only the binaries (obscura, agent-reach, FreeLLMAPI) are machine-wide.
+
+### Where each piece lives
+
+| Tool | What it adds | Claude Code | Codex | Antigravity |
+|---|---|---|---|---|
+| [Gravitas](https://github.com/udaysharmadev/Gravitas) | Evidence-gated engineering discipline (4 skills) | `.claude/skills` link | `.agents/skills` | `.agents/skills` |
+| [ai-design-skills](https://github.com/elayadesign/ai-design-skills) | `landing-page-design`, `figma-designer` | `.claude/skills` link | `.agents/skills` | `.agents/skills` |
+| [hallmark](https://github.com/Nutlope/hallmark) | Anti-generic page design and audit | `.claude/skills` link | `.agents/skills` | `.agents/skills` |
+| [lemo-opuscar](https://github.com/lemomo-ai/lemo-opuscar) | Short films rendered in code | `.claude/skills` link | `.agents/skills` | `.agents/skills` |
+| [obscura](https://github.com/h4ckf0r0day/obscura) | Rust headless browser: skill + MCP server (38 tools) | skill link + `.mcp.json` | skill + `.codex/config.toml` | skill + `.agents/plugins/obscura-mcp` |
+| [ponytail](https://github.com/DietrichGebert/ponytail) | Smallest-complete-change coding mode, review and audit | plugin `ponytail@ponytail` (project scope) | 6 skills + AGENTS.md ruleset | 6 skills + AGENTS.md ruleset |
+| [superpowers](https://github.com/obra/superpowers) | Brainstorm, plan, TDD, debugging workflows (15 skills) | plugin `superpowers@claude-plugins-official` (project scope) | 15 skills | 15 skills |
+| [Agent-Reach](https://github.com/Panniantong/Agent-Reach) | Read-only search/read across 14 platforms | `.claude/skills/agent-reach` link | `~/.agents/skills/agent-reach` (global, see notes) | `.agents/external-skills` via `.agents/skills.json` |
+| [FreeLLMAPI](https://github.com/tashfeenahmed/freellmapi) | Local router pooling free LLM API tiers | MCP to be wired after setup | MCP to be wired after setup | MCP to be wired after setup |
+
+Machine-wide components:
+- obscura 0.2.6 (standard build, no stealth): `%LOCALAPPDATA%\Programs\obscura\obscura.exe`, added to the user PATH.
+- Agent-Reach 1.6.1: `uv tool` install. Its state, private tools and the CloakBrowser Chromium (about 540 MB) live in `~/.agent-reach/`.
+- FreeLLMAPI 0.16.24 desktop app: `%LOCALAPPDATA%\Programs\freellmapi-desktop\FreeLLMAPI.exe` (Start Menu: FreeLLMAPI). It serves on `http://localhost:31415` (loopback only) and keeps its data in `%APPDATA%\FreeLLMAPI\`.
+
+### Using it
+- ponytail: `/ponytail [lite|full|ultra|off]`, `/ponytail-review`, `/ponytail-audit` in Claude Code (namespaced `ponytail:`); `$ponytail-review` in Codex; `/ponytail-review` in Antigravity.
+- superpowers: describe the task; `using-superpowers` routes to `brainstorming`, `writing-plans`, `systematic-debugging` and the rest.
+- Gravitas: "Use Gravitas to fix this bug and verify the result."
+- Agent-Reach: `agent-reach channels`, `agent-reach read <url>`, `agent-reach reddit search "crowd density"`. Login channels first reuse an existing browser session and otherwise open a window where you log in yourself. A secondary account is recommended. Xiaoyuzhou transcription needs `agent-reach configure groq-key`, entered in your own terminal.
+- obscura: `obscura fetch https://example.com --dump text` or the `browser_*` MCP tools inside any agent.
+- Design skills respect the locked Neo-Brutalism system (see AGENTS.md).
+
+### Maintenance
+```bash
+npx skills update                    # all vendored skills in .agents/skills (skills-lock.json)
+claude plugin update ponytail@ponytail
+claude plugin update superpowers@claude-plugins-official
+agent-reach update                   # program, channel tools and skill copies
+agent-reach doctor                   # offline status of every channel
+```
+- obscura: download the new `obscura-x86_64-windows.zip` from its releases and extract it over `%LOCALAPPDATA%\Programs\obscura`.
+- FreeLLMAPI: updates itself from the tray (Check for Updates).
+
+### Wiring FreeLLMAPI as an MCP tool (after setup)
+1. Open FreeLLMAPI, add your provider keys on the Keys page, turn on the MCP surface under Agent compatibility (it is off by default) and copy the unified key.
+2. Store the key as a user environment variable in your own terminal, never in chat or a committed file:
+   `[Environment]::SetEnvironmentVariable("FREELLMAPI_API_KEY", "<unified key>", "User")`
+3. Register the endpoint (confirm the port shown in the app; default 31415):
+   - Claude Code, in `.mcp.json` under `mcpServers`: `"freellmapi": {"type": "http", "url": "http://localhost:31415/mcp", "headers": {"Authorization": "Bearer ${FREELLMAPI_API_KEY}"}}`, then add `"freellmapi"` to `enabledMcpjsonServers` in `.claude/settings.json`.
+   - Codex, in `.codex/config.toml`: `[mcp_servers.freellmapi]` with `url = "http://localhost:31415/mcp"` and `bearer_token_env_var = "FREELLMAPI_API_KEY"`.
+   - Antigravity: create `.agents/plugins/freellmapi-mcp/` (a `plugin.json` with a name and version, and an `mcp_config.json` with `url` and an `Authorization` header). Add that folder to `.gitignore` first, because the key is stored literally there.
+4. Main models stay unchanged. Never point an agent's base URL at FreeLLMAPI.
+
+### Known issues and notes
+- Codex reads `~/.agents/skills` in every project, so the Agent-Reach skill is visible to Codex globally. That is the copy Agent-Reach itself updates.
+- Agent-Reach 1.6.1 re-links its skill into `~/.claude/skills`, `~/.gemini/skills` and `~/.copilot/skills` whenever `agent-reach setup` or `update` runs. These folders are recorded as opted out in `~/.agent-reach/state.json` (`skill.unlinked`), which newer releases honor. If the links come back, delete them or run `agent-reach skill unlink <dir>` on a release that has it.
+- Antigravity ignores `.agents/skills.json` entries that point outside the repository, so Agent-Reach keeps a managed copy in `.agents/external-skills/agent-reach` (refreshed by `agent-reach update`).
+- CloakBrowser 0.6.3 (Agent-Reach's login browser) breaks with Playwright 1.65+. Its private venv is pinned to Playwright 1.64.1. If `agent-reach update` reinstalls Playwright 1.65+, run `~/.agent-reach/tools/cloakbrowser/venv/Scripts/python.exe -m pip install "playwright>=1.53,<1.65"`.
+- The obscura path in `.codex/config.toml` and `.agents/plugins/obscura-mcp/mcp_config.json` is absolute and machine-specific. `.mcp.json` uses `${LOCALAPPDATA}`.
+- Claude Code's official marketplace pins superpowers at 7.0.0, while the Codex and Antigravity skills are 7.0.2.
+- lemo-opuscar downloads its style library to `~/lemo-opuscar` on first use and needs ffmpeg 7+ on PATH (not installed system-wide yet). hallmark's rendered checks need `npm i -g puppeteer-core` and Chrome; without them it runs static checks only.
+- Uninstall: `npx skills remove <name>`, `claude plugin uninstall <plugin> --scope project`, `agent-reach uninstall --dry-run` then `agent-reach uninstall`, FreeLLMAPI from Windows Settings > Apps, and delete `%LOCALAPPDATA%\Programs\obscura` (remove it from the user PATH too).
+

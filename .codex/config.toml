@@ -1,0 +1,8 @@
+# Project-scoped Codex settings. Codex loads this file only because this
+# repository is marked trusted in ~/.codex/config.toml.
+# The obscura binary path is machine-specific: see "Agent Tooling" in README.md.
+
+[mcp_servers.obscura]
+command = 'C:\Users\Vikash Kumar\AppData\Local\Programs\obscura\obscura.exe'
+args = ["mcp"]
+startup_timeout_sec = 30

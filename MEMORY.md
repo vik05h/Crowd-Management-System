@@ -435,4 +435,25 @@
   - Full test suite: 37/37 passed in 8.04s.
   - Zero emojis across all code, comments, templates, and documentation.
 
+## AI Agent Tooling Installation for Claude Code, Codex and Antigravity (2026-11-11)
+- Request: install nine third-party agent repositories so Claude Code, Codex and Antigravity (used equally) all get them: Agent-Reach, ponytail, lemo-opuscar, freellmapi, Gravitas, ai-design-skills, hallmark, superpowers, obscura. Every repository and hook script was audited before install, and every installed skill was diffed byte-for-byte against the audited source.
+- User decisions (grilling rounds):
+  1. Scope: this project only. Skills are vendored into `.agents/skills/` (committed, tracked in `skills-lock.json`) with Claude Code symlinks in `.claude/skills/` (gitignored). Binaries are machine-wide by nature.
+  2. FreeLLMAPI: desktop app installed now. MCP wiring waits until the user adds provider keys (exact steps in README.md). Agents' main models are never rerouted.
+  3. Gravitas: skills only. The fail-closed Antigravity enforcement plugin (gravitas-native) was not installed.
+  4. Agent-Reach: all 14 channels enabled, including the login channels (X, Reddit, Facebook, Instagram, Xiaohongshu, LinkedIn, Boss, Xueqiu, Xiaoyuzhou).
+  5. ponytail always-on for Codex and Antigravity comes from its ruleset pasted into AGENTS.md (Codex plugins are user-wide only). Claude Code gets the ponytail plugin.
+  6. Agent-Reach skill kept as close to project-only as its CLI allows.
+- Per-agent mechanisms verified:
+  - Claude Code: plugins `ponytail@ponytail` 5.3.3 and `superpowers@claude-plugins-official` 7.0.0 at project scope (`.claude/settings.json`). obscura MCP in `.mcp.json` via `${LOCALAPPDATA}` expansion, pre-approved with `enabledMcpjsonServers`; `claude mcp list` reports Connected.
+  - Codex (`codex.exe` ships inside the Store app at `C:\Program Files\WindowsApps\OpenAI.Codex_*\app\resources\codex.exe` and is not on PATH): project `.codex/config.toml` (honored because the repo is trusted) registers obscura. `codex debug prompt-input` confirmed every new skill and AGENTS.md are model-visible without spending tokens.
+  - Antigravity (`~/.gemini/bin/agy.exe`, v1.5.5): workspace skills in `.agents/skills/`, workspace plugin `.agents/plugins/obscura-mcp/` (plugin.json + mcp_config.json). One plan-mode `agy -p` prompt confirmed all skills plus the MCP server `obscura-mcp_obscura`.
+- Gotchas discovered:
+  1. Antigravity's global folders are `~/.gemini/config/skills` and `~/.gemini/config/plugins`, not `~/.gemini/antigravity/skills` as older skills CLI versions assume. Workspace `.agents/skills.json` entries load only from inside the repository: absolute paths, `../` and symlinks are skipped. Agent-Reach therefore keeps a managed real copy in `.agents/external-skills/agent-reach` (registered with `agent-reach skill link`, refreshed by `agent-reach update`). Codex does not scan that folder, so it does not see a duplicate.
+  2. Agent-Reach v1.6.1 has no `skill unlink` command (only main does) and re-links `~/.claude`, `~/.gemini` and `~/.copilot` skill folders on every setup or update. Those links were removed and recorded under `skill.unlinked` in `~/.agent-reach/state.json`, which v1.6.1 preserves and newer releases honor.
+  3. Agent-Reach login channels failed with "CloakBrowser could not be installed and no system Chrome was found". There is no Google Chrome on this machine (Edge only), and cloakbrowser 0.6.3 crashed importing `playwright._impl._js_handle` because pip resolved Playwright 1.65.0 (upstream cloakbrowser 0.7.2 caps `playwright<1.65`). Fixed by pinning Playwright 1.64.1 inside `~/.agent-reach/tools/cloakbrowser/venv`, then running `cloakbrowser install` without the 180 s cap (535 MB, Ed25519-verified).
+  4. FreeLLMAPI's NSIS installer crashed once (0xC0000005 in NSIS System.dll) when launched from the deep scratch path, then installed cleanly. electron-builder installs it to `%LOCALAPPDATA%\Programs\freellmapi-desktop`. The desktop server uses port 31415, not the Docker default 3001.
+  5. Windows PowerShell 5.1 drops empty `""` arguments to native commands, which silently breaks `cmd /c start "" ...`.
+- Outstanding for the user: open FreeLLMAPI and add keys, then wire its MCP. Enter a Groq key for Xiaoyuzhou. Install ffmpeg 7+ for lemo-opuscar renders. Optionally install puppeteer-core and Chrome for hallmark's rendered checks. Restart Claude Code, Codex and Antigravity so plugins, hooks and the new PATH load.
+
 

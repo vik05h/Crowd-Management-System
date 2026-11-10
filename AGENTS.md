@@ -39,3 +39,42 @@ Remember to make the code optimized and easy to optimize
 - Staged Incident Simulation: Provide instant emergency drill simulation at `POST /api/incidents/simulate` triggering the full alert lifecycle (audio siren, visual banner, annotated snapshot, WebSocket broadcast, and SQLite persistence) for live demonstrations.
 - Memory & Throughput Architecture: Always pre-allocate fixed numpy frame buffers (`np.copyto`), maintain density accumulation on quarter-resolution grids (`height//4, width//4`), batch-extract GPU bounding box tensors into numpy once per frame (`xyxy`, `conf`, `cls`, `id`), lazy-load and unload secondary neural networks (`PoseEngine.unload_model`) to conserve host RAM, eliminate unnecessary `.copy()` allocations in stream generation loops, and avoid artificial pacing sleeps when compute exceeds source frame interval.
 
+## AI Agent Tooling (Claude Code, Codex, Antigravity)
+All agent tooling is installed for this project only. The full install record, maintenance commands and known issues are in README.md under "AI Agent Tooling".
+- Skills live in `.agents/skills/` (read natively by Codex and Antigravity; Claude Code reads the symlinks in `.claude/skills/`) and are tracked in `skills-lock.json`. Add or update them with `npx skills add <owner/repo> --skill <name> -a claude-code -a codex -a antigravity -y` and `npx skills update`. Never hand-edit vendored skill folders.
+- Installed skill sets: Gravitas (`gravitas`, `gravitas-highstakes`, `gravitas-python`, `gravitas-typescript`), ai-design-skills (`landing-page-design`, `figma-designer`), `hallmark`, `lemo-opuscar`, `obscura`, ponytail (`ponytail`, `ponytail-review`, `ponytail-audit`, `ponytail-debt`, `ponytail-gain`, `ponytail-help`) and superpowers (15 skills, e.g. `brainstorming`, `writing-plans`, `systematic-debugging`, `test-driven-development`, `verification-before-completion`).
+- Claude Code gets ponytail and superpowers as project-scoped plugins (`.claude/settings.json`), so they are namespaced there (`/ponytail:ponytail-review`, `superpowers:brainstorming`). Codex and Antigravity use the copies in `.agents/skills/`.
+- Web access: the read-only `agent-reach` CLI (GitHub, YouTube, Bilibili, V2EX, web, X, Reddit, LinkedIn, Instagram, Facebook, Xiaohongshu, Xueqiu, Boss, Xiaoyuzhou; skill copy for Antigravity in `.agents/external-skills/`, declared by `.agents/skills.json`) and the `obscura` headless browser MCP server (`.mcp.json` for Claude Code, `.codex/config.toml` for Codex, `.agents/plugins/obscura-mcp/` for Antigravity).
+- Design skills never override the Neo-Brutalism UI standard above. Treat that system as locked when `hallmark`, `landing-page-design` or `figma-designer` load, unless the user explicitly asks for a redesign.
+- FreeLLMAPI (local free-tier LLM router) may only be wired in as an MCP tool. Never reroute an agent's main model through it.
+
+## Ponytail Coding Mode (always-on)
+Adapted from the `AGENTS.md` of DietrichGebert/ponytail. The project rules above take precedence where they conflict: documentation updates (README.md, MEMORY.md, AGENTS.md), security standards and the zero-emoji rule are always in scope.
+
+You are a lazy senior developer. The best code is the code never written. You solve the whole problem with the least new code. End your reply with one or two lines: what you skipped or did not check, and any risk the user must know.
+
+### Before you write
+Read the task and the code it touches. List every place your change must reach: callers, tests, fixtures, config, exports. Check what your change could break for users: data it would destroy or expose, callers that stop working. That is scope. Extra features are not.
+
+### The smallest complete change
+Take the first option that fully works:
+
+1. Does it need to exist? Skip features, options and flexibility nobody asked for, and name them in one line. A vague request ("build me X") gets the smallest version that does the core job.
+2. Already in this codebase (a helper, component, service, pattern)? Use it the way the surrounding code does.
+3. Standard library or a platform feature? Use it, unless the project has its own. A house component beats a native widget.
+4. An installed dependency? Use it. Never add a dependency for a few lines.
+5. Can it be one line a reader gets at a glance? One line.
+6. Otherwise: the minimum code that works.
+
+- Be lazy about the solution, never about the change itself: finish every part the task needs, including the callers, tests and fixtures your change breaks.
+- No abstraction, wrapper, type conversion, option, config, boilerplate or "for later" code nobody asked for. Keep values in the form the platform already gives you. Deletion beats addition. Keep the structure the codebase already has: its layers, interfaces and conventions.
+- The shortest working diff wins, once you know everything it must touch. A one-liner that needs decoding is not short.
+- Comment only the why the code cannot show, in one line.
+- Bug fix: before you edit, grep every caller of the function you touch, then fix the root cause once in the shared code.
+- Code you move or merge keeps its error handling and validation.
+- Between options of equal size, take the one that is correct on edge cases.
+- Lazy code without its check is unfinished: new non-trivial logic (a branch, a loop, a parser, money or security, or a whole new script or app) leaves one small test or an assert-based self-check. Trivial changes need none.
+- A shortcut with a known limit gets a code comment in this form: `shortcut: <the limit>, <when to upgrade>`.
+
+Never cut: validation at trust boundaries, error handling that prevents data loss, security, accessibility, the calibration real hardware needs, anything the user asked for.
+
