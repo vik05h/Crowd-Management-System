@@ -317,3 +317,143 @@
   - Zero emojis across all templates, comments, code, and documentation (verified via automated scanner).
   - 25/25 automated tests passed in `uv run pytest`.
   - Uvicorn server actively running in background on port 8000 with live HTTP 200 responses verified on all endpoints.
+
+## Phase 1 Evolution: Spatial Safety Intelligence SOC, YOLO-Pose, Interactive Polygonal Zones, and Real-Time Event Bus
+- Strategic Repositioning:
+  - Repositioned from standard crowd counter to "AI-Powered Spatial Safety Intelligence Platform" for campus and corporate security operations.
+- 3-Tier Modular Codebase Architecture (`cms/`):
+  - `cms/data/database.py`: Async SQLite database engine via `aiosqlite` with schema for users, security zones, zone occupancy logs, safety events, and crowd density telemetry snapshots.
+  - `cms/auth/jwt_auth.py`: Role-Based Access Control (Admin, Operator, Viewer) with PBKDF2-SHA256 password hashing and signed HS256 JWT tokens.
+  - `cms/analytics/zone_tracker.py`: High-performance point-in-polygon spatial detection (`cv2.pointPolygonTest`), per-person track entry/exit and dwell duration tracking, and sustained zone capacity breach alerts.
+  - `cms/core/pose_engine.py`: Ultralytics YOLO-Pose integration with 17 COCO keypoints, detecting falls (horizontal spine angle > 52 deg for >= 1.6s), unresponsive/collapsed persons (stillness in fallen pose for >= 6.0s), and panic strides.
+  - `cms/api/websocket_hub.py`: Real-Time WebSocket event hub (`/ws/events`) and SSE stream fallback (`/api/events/stream`) broadcasting live telemetry, zone updates, and pose incidents.
+- Interactive Analytics SOC Dashboard (`templates/analytics.html`):
+  - Fully implemented Neo-Brutalism design system with `#FAF7F2` paper canvas, 3px solid black outlines, and hard offset drop shadows (`4px 4px 0px #000`, `6px 6px 0px #000`).
+  - 4 interactive Chart.js v4 graphs: Historical Density Trend (1H/6H/24H/7D filters), Sector Occupancy vs Limit, Sector Dwell Duration Profiling, and Pose Incidents Breakdown (Doughnut).
+  - High-density stat cards with Kit Langton rolling digit reel animations.
+  - Dynamic Sector Management modal and table for creating/deleting polygonal zones with custom colors and thresholds.
+  - Live incident audit table with 1-click operator acknowledgment.
+- Automated Test Suite & Quality Verification:
+  - Added `tests/test_phase1.py` with 6 comprehensive test suites covering PBKDF2 password hashing, JWT creation/validation, ZoneTracker point-in-polygon & breaches, PoseEngine execution, auth login/me routes, and analytics endpoints.
+  - Full test suite: 31/31 unit, integration, security, and inference tests passing in 8.39 seconds with 0 failures (`uv run pytest tests/ -v`).
+  - Scanned and confirmed strictly zero emojis across all code, markup, and documentation files.
+
+## Phase 2: Ultralytics YOLO26 Pose, Hardware Acceleration Architecture, and Live On-Stream Sector Calibration
+- Ultralytics YOLO26 Pose Upgrade:
+  - Transitioned pose engine from legacy YOLO11 to official Ultralytics YOLO26 Pose family (`yolo26n-pose.pt` default, 7.5MB).
+  - Dynamically loadable and hot-swappable at runtime across sizes: `yolo26n-pose.pt`, `yolo26s-pose.pt` (23MB), `yolo26m-pose.pt` via `POST /api/settings/pose_model`.
+  - Temporal Stride Frame Skipping: Added configurable pose stride (`stride=2` or `stride=3`). Skeletons are interpolated and tracked across ByteTrack IDs on intermediate frames, cutting pose compute time by 50% to 66% while preserving smooth 30+ FPS skeletal tracking.
+- Hardware Acceleration & Scalability Profiles:
+  - FP16 Half-Precision on CUDA: Enabled `half=True` execution on NVIDIA RTX 4050 Tensor Cores for both YOLO26 detection and YOLO26 pose models, speeding up inference by ~2x.
+  - Tiered Hardware Performance Presets:
+    1. Eco / Laptop GPU (RTX 3050/4050): `yolo26n-pose.pt`, FP16, 640px inference, Pose Stride = 2.
+    2. Balanced (RTX 4060/4070): `yolo26s-pose.pt`, FP16, 640px inference, Pose Stride = 1.
+    3. Ultra / High-End GPU (RTX 4080/4090/A100): `yolo26m-pose.pt`, FP16, 1024px inference, Pose Stride = 1.
+    4. Custom: Granular operator overrides for resolution, model scale, stride, and FP16.
+  - Endpoints: `GET /api/settings/hardware`, `POST /api/settings/hardware_profile`, `POST /api/settings/pose_stride`, `POST /api/settings/fp16`, `POST /api/settings/export_tensorrt`.
+  - Real-Time Hardware Telemetry: Detection latency (ms), pose latency (ms), frame rate (FPS), and GPU VRAM allocated tracked and broadcast in HUD.
+- Live On-Stream Sector Calibration:
+  - Added dedicated Sectors ON/OFF toggle (`#sectorsToggleBtn`) on `/live_preview` (defaulting to OFF for clean video streaming).
+  - Added interactive On-Stream Calibration Mode (`#calibrateBtn`):
+    - HTML5 canvas overlay with draggable neon circular vertex handles rendered over the live video stream.
+    - Operators visually drag corners to align with physical walkways, doorways, and concourses.
+    - Real-time coordinate conversion between canvas view and native 1280x720 video space.
+    - 1-click "Save Positions" updates SQLite and `ZoneTracker` via `PUT /api/zones/{zone_id}/polygon` and broadcasts to WebSocket clients.
+- Upgraded Tactical Command Bar:
+  - Redesigned 640px button into a tactile 2-mode switch: "Inference: 640px (Turbo)" vs "1024px (Precision)" with active cyan styling, live HUD telemetry badges, and toast notifications.
+  - Added Hardware Acceleration drawer modal displaying GPU specs, active preset pills, model selector, and TensorRT compilation button.
+  - Added Neo-Brutalism toast notification system (`#neoToast`).
+- Automated Test Suite & Quality Verification:
+  - Updated `tests/test_phase1.py` with `test_hardware_acceleration_and_calibration` testing telemetry, profile switching, stride setting, FP16, and polygon calibration.
+  - Full test suite: 32/32 tests passing in 8.33s with zero failures (`uv run pytest tests/ -v`).
+  - Scanned and confirmed strictly zero emojis across all code, markup, and documentation files.
+
+## Phase 1.5: Multi-Camera CCTV Grid, Real-Time Privacy Anonymization, CSV Data Export, and Incident Drill Simulation
+- Audit Log Persistence and UI Normalization:
+  - Diagnosed cause of missing logs: previous Uvicorn server task had terminated, causing client WebSocket to drop to RECONNECTING state and `fetch('/api/incidents')` to fail.
+  - Enriched and normalized `GET /api/incidents` in `app.py` to seamlessly merge persistent SQLite `safety_events` (128+ historical rows) and active in-memory incident records.
+  - Standardized incident schema fields (`people_count`, `threshold`, `event_type`, `zone_name`, `snapshot_url`, `details`) to eliminate JavaScript `undefined` artifacts.
+  - Upgraded `loadIncidents()` in `templates/live_preview.html` and `fetchIncidents()` in `templates/analytics.html` to dynamically render distinct pastel badges for FALL, COLLAPSE, PANIC, ZONE_BREACH, and CROWD.
+- Privacy Protection and Face Anonymization Pipeline (DPDPA 2023 / GDPR Compliance):
+  - Created `cms/privacy/face_blur.py` (`PrivacyManager`) and `cms/privacy/__init__.py`.
+  - Employs cranial keypoint tracking (nose, eyes, ears) via YOLO-Pose landmarks combined with head geometry estimation to compute elliptical cranial bounding regions.
+  - Applies irreversible heavy Gaussian blurring (`ksize=(51, 51)`) over facial regions on camera output frames with an on-stream compliance watermark badge ("PRIVACY ANONYMIZATION: ACTIVE [DPDPA 2023 / GDPR]").
+  - Integrated into live surveillance, single-worker video loops, and batch processing streams via `privacy_manager.apply()`.
+  - Added toggle endpoints: `GET /api/settings/privacy` and `POST /api/settings/privacy`.
+  - Added tactile "Privacy Blur: OFF/ON" buttons with live feedback across `/cameras`, `/live_preview`, and `/analytics`.
+- Multi-Camera Surveillance CCTV Grid (`/cameras`):
+  - Built `templates/cameras.html` following the authentic Neo-Brutalism UI design system (bold black borders, hard non-blurred offset shadows, pastel color blocking).
+  - Supports selectable 2x2 multi-feed grid and 1+3 focus modes, simulated camera feeds with live timecode/scanlines, and per-camera metrics.
+  - Added endpoints `GET /cameras` and `GET /api/cameras` returning active camera statuses and aggregate multi-camera headcount.
+  - Synchronized top navigation bars across all 5 templates (`index.html`, `live_preview.html`, `video_studio.html`, `analytics.html`, `cameras.html`).
+- CSV Data Export Engine:
+  - Implemented `GET /api/export/csv` in `app.py` with RFC 4180 compliance, `Content-Disposition`, and no-cache headers.
+  - Supports three export datasets: `type=incidents` (safety audit records), `type=trends` (historical density time series), and `type=zones` (sector occupancies and dwell durations).
+  - Added direct CSV download buttons with tactile styling in `templates/analytics.html` and `templates/cameras.html`.
+- Staged Safety Incident Drill Simulation:
+  - Built `POST /api/incidents/simulate` in `app.py` accepting `event_type` (`fall`, `collapse`, `panic`, `zone_breach`, `overcrowding`), `zone_name`, and `confidence`.
+  - Automatically renders an annotated synthetic simulation frame snapshot, updates SQLite `safety_events`, broadcasts via WebSocket (`/ws/events`), and triggers audio/visual sirens.
+  - Added interactive simulation modal dialogs with pastel accent buttons on `/cameras`, `/live_preview`, and `/analytics`.
+- Automated Test Suite & Quality Verification:
+  - Added `tests/test_phase1_5.py` with 5 targeted unit and integration tests covering privacy blur processing, privacy settings endpoints, multi-camera grid API, CSV data export formats, and incident drill simulation.
+  - Full test suite: 37/37 tests passing in 8.12s (`uv run pytest tests/ -v`).
+  - Active background Uvicorn daemon running on port 8000.
+  - Verified strictly zero emojis across all code, comments, templates, and documentation.
+
+## System Performance & RAM Optimization Upgrade
+- Root Cause Diagnosis:
+  - Task Manager telemetry revealed host RAM at 77% (12.1 GB / 15.7 GB) and committed virtual memory at 85% (22.9 GB / 27.0 GB pagefile) despite low GPU VRAM usage (266 MB / 6140 MB, 4.3%).
+  - Bottlenecks identified:
+    1. High transient allocation churn from `.copy()` calls across every frame in the pipeline (~280 MB/s transient allocation rate).
+    2. Full-resolution density map (1280x720 float32 = 3.7 MB) with heavy 65x65 Gaussian blur creating ~7 MB transient buffers per frame.
+    3. Dual concurrent YOLO model residency (YOLO26m detection + YOLO26n-Pose) consuming 600+ MB host RAM for framework predictor buffers.
+    4. Per-box GPU-to-CPU tensor synchronization in tracking loops calling `.cpu().numpy()` inside inner loops.
+    5. Polling copy churn in `/video_feed` creating copies even when no new frame ID arrived.
+- Performance Architecture Enhancements:
+  1. Buffer Reuse & In-Place Mutation: Replaced repeated frame buffer reallocations with `np.copyto` on pre-allocated buffers. In-place blending applied in `_apply_heatmap()` and `apply_face_blur(..., in_place=True)`. In `/video_feed`, only copy when `current_id != last_sent_id` with immediate local tensor deletion.
+  2. Quarter-Resolution Density Grid: Scaled density accumulation grid to quarter dimensions (`height // 4, width // 4` = 320x180 = ~230 KB), reducing steady-state RAM by 94% and accelerating Gaussian thermal blur by 16x.
+  3. Lazy Loading & Memory Unloading: Integrated `lazy_load=True`, `ensure_model_loaded()`, and `unload_model()` into `PoseEngine`. When pose estimation is toggled off, the model is freed from host RAM and CUDA cache is flushed. Immediate `del results` frees PyTorch tensors immediately.
+  4. Batched Bounding Box Extraction: Single batched `.cpu().numpy()` extraction for bounding boxes, confidence, class, and track IDs across `process_video()`, `detect_frame()`, and `_run_batch_processing()`.
+  5. Pacing Calibration & GC Cadence: Removed artificial sleep floors when compute duration exceeds frame budget (`frame_duration - elapsed > 0.002`). Periodic garbage collection (`gc.collect()` and CUDA cache empty) executed every 300 frames.
+  6. Magnification Cell Feature Removal: Completely removed the zoom inspection modal, viewport click listener, and background `/zoom_feed` polling from `/live_preview`, preventing accidental modal triggers and freeing streaming overhead.
+- Verification & Quality:
+  - All 37 unit, integration, and security tests passing in 8.26s with zero failures.
+  - Zero emojis across all code, comments, templates, and documentation.
+
+## Full Native Quality Restoration & Processing Profile Refinement
+- User Feedback & Diagnosis:
+  - The downscaled streaming resolution (960x540) did not improve perceptual speed for the user since backend model inference is the primary pacing factor.
+  - The user requested restoring full-quality native video streaming and simplifying presets to Eco and Balanced (Quality), while removing the term "GPU" since the architecture is not GPU-heavy.
+- Architecture Changes:
+  1. Full Native Video Streaming: Restored `_publish_frame()` in `yolo_inference.py` to stream at native 1280x720 resolution with high JPEG quality (`quality=85`), eliminating artificial downscaling while keeping the zero-latency shared memory frame bus.
+  2. Processing Profiles: Streamlined presets to:
+     - **Eco**: 640px, Stride 2 (fast execution).
+     - **Balanced (Quality)**: 640px, Stride 1 (full posture tracking fidelity).
+     - Removed the "Ultra High-End GPU" preset.
+  3. Terminology Neutralization: Replaced all user-facing "GPU" labels with "Processing Engine", "Profiles", and "Acceleration", eliminating misleading hardware claims across modals, buttons, and benchmark descriptions.
+- Test Suite & Status:
+  - Full test suite: 37/37 passed in 8.04s.
+  - Zero emojis across all code, comments, templates, and documentation.
+
+## AI Agent Tooling Installation for Claude Code, Codex and Antigravity (2026-11-11)
+- Request: install nine third-party agent repositories so Claude Code, Codex and Antigravity (used equally) all get them: Agent-Reach, ponytail, lemo-opuscar, freellmapi, Gravitas, ai-design-skills, hallmark, superpowers, obscura. Every repository and hook script was audited before install, and every installed skill was diffed byte-for-byte against the audited source.
+- User decisions (grilling rounds):
+  1. Scope: this project only. Skills are vendored into `.agents/skills/` (committed, tracked in `skills-lock.json`) with Claude Code symlinks in `.claude/skills/` (gitignored). Binaries are machine-wide by nature.
+  2. FreeLLMAPI: desktop app installed now. MCP wiring waits until the user adds provider keys (exact steps in README.md). Agents' main models are never rerouted.
+  3. Gravitas: skills only. The fail-closed Antigravity enforcement plugin (gravitas-native) was not installed.
+  4. Agent-Reach: all 14 channels enabled, including the login channels (X, Reddit, Facebook, Instagram, Xiaohongshu, LinkedIn, Boss, Xueqiu, Xiaoyuzhou).
+  5. ponytail always-on for Codex and Antigravity comes from its ruleset pasted into AGENTS.md (Codex plugins are user-wide only). Claude Code gets the ponytail plugin.
+  6. Agent-Reach skill kept as close to project-only as its CLI allows.
+- Per-agent mechanisms verified:
+  - Claude Code: plugins `ponytail@ponytail` 5.3.3 and `superpowers@claude-plugins-official` 7.0.0 at project scope (`.claude/settings.json`). obscura MCP in `.mcp.json` via `${LOCALAPPDATA}` expansion, pre-approved with `enabledMcpjsonServers`; `claude mcp list` reports Connected.
+  - Codex (`codex.exe` ships inside the Store app at `C:\Program Files\WindowsApps\OpenAI.Codex_*\app\resources\codex.exe` and is not on PATH): project `.codex/config.toml` (honored because the repo is trusted) registers obscura. `codex debug prompt-input` confirmed every new skill and AGENTS.md are model-visible without spending tokens.
+  - Antigravity (`~/.gemini/bin/agy.exe`, v1.5.5): workspace skills in `.agents/skills/`, workspace plugin `.agents/plugins/obscura-mcp/` (plugin.json + mcp_config.json). One plan-mode `agy -p` prompt confirmed all skills plus the MCP server `obscura-mcp_obscura`.
+- Gotchas discovered:
+  1. Antigravity's global folders are `~/.gemini/config/skills` and `~/.gemini/config/plugins`, not `~/.gemini/antigravity/skills` as older skills CLI versions assume. Workspace `.agents/skills.json` entries load only from inside the repository: absolute paths, `../` and symlinks are skipped. Agent-Reach therefore keeps a managed real copy in `.agents/external-skills/agent-reach` (registered with `agent-reach skill link`, refreshed by `agent-reach update`). Codex does not scan that folder, so it does not see a duplicate.
+  2. Agent-Reach v1.6.1 has no `skill unlink` command (only main does) and re-links `~/.claude`, `~/.gemini` and `~/.copilot` skill folders on every setup or update. Those links were removed and recorded under `skill.unlinked` in `~/.agent-reach/state.json`, which v1.6.1 preserves and newer releases honor.
+  3. Agent-Reach login channels failed with "CloakBrowser could not be installed and no system Chrome was found". There is no Google Chrome on this machine (Edge only), and cloakbrowser 0.6.3 crashed importing `playwright._impl._js_handle` because pip resolved Playwright 1.65.0 (upstream cloakbrowser 0.7.2 caps `playwright<1.65`). Fixed by pinning Playwright 1.64.1 inside `~/.agent-reach/tools/cloakbrowser/venv`, then running `cloakbrowser install` without the 180 s cap (535 MB, Ed25519-verified).
+  4. FreeLLMAPI's NSIS installer crashed once (0xC0000005 in NSIS System.dll) when launched from the deep scratch path, then installed cleanly. electron-builder installs it to `%LOCALAPPDATA%\Programs\freellmapi-desktop`. The desktop server uses port 31415, not the Docker default 3001.
+  5. Windows PowerShell 5.1 drops empty `""` arguments to native commands, which silently breaks `cmd /c start "" ...`.
+- Outstanding for the user: open FreeLLMAPI and add keys, then wire its MCP. Enter a Groq key for Xiaoyuzhou. Install ffmpeg 7+ for lemo-opuscar renders. Optionally install puppeteer-core and Chrome for hallmark's rendered checks. Restart Claude Code, Codex and Antigravity so plugins, hooks and the new PATH load.
+
+

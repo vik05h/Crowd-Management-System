@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CMS - Multi-Camera CCTV Surveillance Grid</title>
+  
+  <!-- Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;600;700;800&family=Space+Grotesk:wght@600;700;800&display=swap" rel="stylesheet" />
+
+  <!-- Bootstrap 5 & Icons -->
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
+
+  <style>
+    /* ==========================================================================
+       Neo-Brutalism UI Design System Tokens
+       ========================================================================== */
+    :root {
+      --neo-bg: #FAF7F2;
+      --neo-surface: #FFFFFF;
+      --neo-black: #000000;
+      --neo-yellow: #FFE500;
+      --neo-yellow-light: #FFF480;
+      --neo-cyan: #A6FAFF;
+      --neo-cyan-light: #D4FCFF;
+      --neo-lime: #B8FF9F;
+      --neo-lime-light: #DDFFCE;
+      --neo-pink: #FFA6F6;
+      --neo-violet: #A8A6FF;
+      --neo-orange: #FFC29F;
+      --neo-red: #FF9F9F;
+      --neo-border-width: 3px;
+      --neo-shadow: 4px 4px 0px #000000;
+      --neo-shadow-lg: 6px 6px 0px #000000;
+      --neo-shadow-xl: 8px 8px 0px #000000;
+      --neo-shadow-sm: 2px 2px 0px #000000;
+      --font-display: 'Space Grotesk', -apple-system, sans-serif;
+      --font-sans: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      --font-mono: 'JetBrains Mono', ui-monospace, Consolas, monospace;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--neo-bg);
+      color: var(--neo-black);
+      font-family: var(--font-sans);
+      min-height: 100vh;
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+      overflow-x: hidden;
+      background-image: radial-gradient(var(--neo-black) 1px, transparent 1px);
+      background-size: 24px 24px;
+      background-position: 0 0;
+    }
+
+    .font-mono { font-family: var(--font-mono); }
+    .font-display { font-family: var(--font-display); }
+
+    /* Fluid Follower Cursor */
+    @media (pointer: fine) {
+      .layers-cursor-dot {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 8px;
+        height: 8px;
+        background-color: var(--neo-black);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 99999;
+        transform: translate(-50%, -50%);
+        transition: opacity 0.2s ease;
+      }
+      .layers-cursor-follower {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 36px;
+        height: 36px;
+        border: 2px solid var(--neo-black);
+        background: rgba(255, 229, 0, 0.45);
+        box-shadow: 2px 2px 0px var(--neo-black);
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 99998;
+        transform: translate(-50%, -50%);
+        transition: width 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+                    height 0.25s cubic-bezier(0.16, 1, 0.3, 1),
+                    background-color 0.2s ease;
+        will-change: left, top;
+      }
+      .layers-cursor-follower.hovering {
+        width: 58px;
+        height: 58px;
+        background: rgba(166, 250, 255, 0.6);
+        box-shadow: 4px 4px 0px var(--neo-black);
+      }
+    }
+
+    /* Buttons */
+    .btn-neo {
+      position: relative;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0.5rem;
+      padding: 0.6rem 1.25rem;
+      border: 3px solid var(--neo-black);
+      border-radius: 8px;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: 0.95rem;
+      text-decoration: none;
+      color: var(--neo-black);
+      background: var(--neo-surface);
+      box-shadow: var(--neo-shadow);
+      cursor: pointer;
+      transition: transform 0.12s cubic-bezier(0.16, 1, 0.3, 1),
+                  box-shadow 0.12s cubic-bezier(0.16, 1, 0.3, 1),
+                  background-color 0.15s ease;
+      user-select: none;
+    }
+    .btn-neo:hover {
+      transform: translate(-2px, -2px);
+      box-shadow: var(--neo-shadow-lg);
+      color: var(--neo-black);
+    }
+    .btn-neo:active {
+      transform: translate(2px, 2px);
+      box-shadow: 0px 0px 0px var(--neo-black);
+    }
+    .btn-neo-yellow { background-color: var(--neo-yellow); }
+    .btn-neo-yellow:hover { background-color: var(--neo-yellow-light); }
+    .btn-neo-cyan { background-color: var(--neo-cyan); }
+    .btn-neo-cyan:hover { background-color: var(--neo-cyan-light); }
+    .btn-neo-lime { background-color: var(--neo-lime); }
+    .btn-neo-lime:hover { background-color: var(--neo-lime-light); }
+    .btn-neo-pink { background-color: var(--neo-pink); }
+    .btn-neo-white { background-color: #FFFFFF; }
+    .btn-neo-red { background-color: var(--neo-red); }
+    .btn-neo-sm {
+      padding: 0.4rem 0.85rem;
+      font-size: 0.82rem;
+      border-width: 2px;
+      box-shadow: 2px 2px 0px var(--neo-black);
+    }
+    .btn-neo-sm:hover {
+      transform: translate(-1px, -1px);
+      box-shadow: 3px 3px 0px var(--neo-black);
+    }
+    .btn-neo-sm:active {
+      transform: translate(1px, 1px);
+      box-shadow: 0px 0px 0px var(--neo-black);
+    }
+
+    /* Badges */
+    .neo-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.35rem;
+      padding: 0.25rem 0.65rem;
+      border: 2px solid var(--neo-black);
+      border-radius: 6px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      box-shadow: var(--neo-shadow-sm);
+      color: var(--neo-black);
+      background: #FFFFFF;
+    }
+    .badge-yellow { background-color: var(--neo-yellow); }
+    .badge-cyan { background-color: var(--neo-cyan); }
+    .badge-lime { background-color: var(--neo-lime); }
+    .badge-pink { background-color: var(--neo-pink); }
+    .badge-red { background-color: var(--neo-red); }
+    .badge-orange { background-color: var(--neo-orange); }
+
+    /* Cards */
+    .neo-card {
+      background: var(--neo-surface);
+      border: var(--neo-border-width) solid var(--neo-black);
+      border-radius: 12px;
+      box-shadow: var(--neo-shadow-lg);
+      overflow: hidden;
+      transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .neo-card:hover {
+      box-shadow: var(--neo-shadow-xl);
+    }
+    .neo-card-header {
+      padding: 0.9rem 1.25rem;
+      background: var(--neo-surface);
+      border-bottom: var(--neo-border-width) solid var(--neo-black);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 1rem;
+    }
+
+    /* Header Nav */
+    .neo-nav {
+      background: var(--neo-surface);
+      border-bottom: 4px solid var(--neo-black);
+      padding: 0.85rem 1.5rem;
+      position: sticky;
+      top: 0;
+      z-index: 1000;
+      box-shadow: 0 4px 0px var(--neo-black);
+    }
+
+    /* Video Viewport */
+    .cctv-screen {
+      position: relative;
+      background: #06090e;
+      aspect-ratio: 16 / 9;
+      width: 100%;
+      overflow: hidden;
+      border-bottom: 3px solid var(--neo-black);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+    .cctv-screen img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      display: block;
+    }
+    .cctv-screen canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+    }
+    .cctv-scanline {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%),
+                  linear-gradient(90deg, rgba(255, 0, 0, 0.04), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.04));
+      background-size: 100% 3px, 6px 100%;
+      pointer-events: none;
+      z-index: 5;
+    }
+    .cctv-overlay-tag {
+      position: absolute;
+      top: 10px;
+      left: 10px;
+      z-index: 10;
+      background: rgba(0, 0, 0, 0.75);
+      border: 2px solid var(--neo-black);
+      padding: 2px 8px;
+      border-radius: 4px;
+      color: #A6FAFF;
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      font-weight: 700;
+    }
+    .cctv-rec-tag {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      z-index: 10;
+      background: #FF4444;
+      border: 2px solid var(--neo-black);
+      padding: 2px 8px;
+      border-radius: 4px;
+      color: #000;
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      font-weight: 800;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+    .cctv-rec-dot {
+      width: 8px;
+      height: 8px;
+      background: #FFFFFF;
+      border-radius: 50%;
+      animation: blink 1s infinite;
+    }
+    @keyframes blink {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.2; }
+    }
+
+    .cctv-controls-overlay {
+      position: absolute;
+      bottom: 8px;
+      right: 8px;
+      z-index: 10;
+      display: flex;
+      gap: 4px;
+      opacity: 0;
+      transition: opacity 0.2s ease;
+    }
+    .cctv-screen:hover .cctv-controls-overlay {
+      opacity: 1;
+    }
+
+    /* Grid Layouts */
+    .cctv-grid-2x2 {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 1.5rem;
+    }
+    @media (max-width: 991px) {
+      .cctv-grid-2x2 {
+        grid-template-columns: 1fr;
+      }
+    }
+    .cctv-grid-focus {
+      display: grid;
+      grid-template-columns: 2.2fr 1fr;
+      gap: 1.5rem;
+    }
+    @media (max-width: 991px) {
+      .cctv-grid-focus {
+        grid-template-columns: 1fr;
+      }
+    }
+    .cctv-grid-focus .focus-sidebar {
+      display: flex;
+      flex-direction: column;
+      gap: 1rem;
+    }
+
+    /* Rolling Numbers */
+    .rolling-number-wrap {
+      display: inline-flex;
+      align-items: flex-start;
+      overflow: hidden;
+      height: 1.25em;
+      line-height: 1.25em;
+      vertical-align: -0.18em;
+    }
+    .rolling-digit-reel {
+      display: inline-flex;
+      flex-direction: column;
+      transition: transform 1.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .rolling-digit-reel span {
+      display: block;
+      height: 1.25em;
+      line-height: 1.25em;
+      text-align: center;
+    }
+
+    /* Modal Styling */
+    .neo-modal-content {
+      border: 4px solid var(--neo-black);
+      border-radius: 12px;
+      box-shadow: 10px 10px 0px var(--neo-black);
+      background: var(--neo-bg);
+    }
+    .neo-modal-header {
+      background: var(--neo-yellow);
+      border-bottom: 3px solid var(--neo-black);
+      padding: 1rem 1.5rem;
+    }
+    .neo-input {
+      width: 100%;
+      border: 3px solid var(--neo-black);
+      border-radius: 8px;
+      padding: 0.6rem 0.85rem;
+      font-family: var(--font-sans);
+      font-weight: 600;
+      background: #FFFFFF;
+      box-shadow: var(--neo-shadow-sm);
+    }
+    .neo-input:focus {
+      outline: none;
+      border-color: var(--neo-black);
+      box-shadow: 4px 4px 0px var(--neo-black);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Fluid Follower Cursor -->
+  <div class="layers-cursor-dot" id="cursorDot"></div>
+  <div class="layers-cursor-follower" id="cursorFollower"></div>
+
+  <!-- Top Sticky Navigation -->
+  <header class="neo-nav">
+    <div class="container-fluid d-flex flex-wrap align-items-center justify-content-between gap-3">
+      <div class="d-flex align-items-center gap-3">
+        <a href="/" class="d-flex align-items-center gap-2 text-decoration-none text-black">
+          <div style="width: 36px; height: 36px; background: var(--neo-yellow); border: 3px solid #000; border-radius: 6px; display: flex; align-items: center; justify-content: center; box-shadow: 2px 2px 0px #000;">
+            <i class="bi bi-grid-3x3 fs-5"></i>
+          </div>
+          <div>
+            <h1 class="h6 mb-0 font-display fw-bold" style="letter-spacing: -0.02em;">CMS MATRIX</h1>
+            <span class="small font-mono fw-bold text-muted" style="font-size: 0.7rem;">CCTV SURVEILLANCE GRID</span>
+          </div>
+        </a>
+        <span class="neo-badge badge-lime font-mono ms-2">
+          <span class="spinner-grow spinner-grow-sm me-1" style="width: 8px; height: 8px;"></span> 4 FEEDS ONLINE
+        </span>
+      </div>
+
+      <!-- Navigation Links -->
+      <nav class="d-flex align-items-center gap-2">
+        <a href="/" class="btn-neo btn-neo-sm btn-neo-white">
+          <i class="bi bi-house"></i> Home
+        </a>
+        <a href="/live_preview" class="btn-neo btn-neo-sm btn-neo-white">
+          <i class="bi bi-camera-video"></i> Live Surveillance
+        </a>
+        <a href="/cameras" class="btn-neo btn-neo-sm btn-neo-yellow">
+          <i class="bi bi-grid-3x3"></i> Multi-Cam Grid
+        </a>
+        <a href="/analytics" class="btn-neo btn-neo-sm btn-neo-white">
+          <i class="bi bi-graph-up"></i> Analytics SOC
+        </a>
+        <a href="/video_studio" class="btn-neo btn-neo-sm btn-neo-white">
+          <i class="bi bi-film"></i> Video Studio
+        </a>
+      </nav>
+
+      <!-- Tactical Actions -->
+      <div class="d-flex align-items-center gap-2">
+        <button class="btn-neo btn-neo-sm btn-neo-pink" onclick="openSimulateModal()">
+          <i class="bi bi-broadcast"></i> Simulate Incident
+        </button>
+        <button class="btn-neo btn-neo-sm btn-neo-cyan" id="privacyBtn" onclick="togglePrivacyMode()">
+          <i class="bi bi-shield-check"></i> Privacy Blur: OFF
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="container-fluid py-4 px-3 px-lg-4">
+
+    <!-- Top Telemetry & Controls Bar -->
+    <div class="neo-card mb-4">
+      <div class="neo-card-header flex-wrap">
+        <div class="d-flex align-items-center gap-4 flex-wrap">
+          <div>
+            <span class="text-muted small text-uppercase font-mono fw-bold d-block">Aggregate Headcount</span>
+            <div class="fs-3 fw-bold font-display d-flex align-items-center gap-1" id="statTotalHeadcount">
+              <span class="font-mono">--</span>
+            </div>
+          </div>
+          <div class="border-start border-2 border-dark ps-3">
+            <span class="text-muted small text-uppercase font-mono fw-bold d-block">Active Stream Preset</span>
+            <span class="font-mono fw-bold" id="telemetryPreset">1080p Matrix [FP16 Turbo]</span>
+          </div>
+          <div class="border-start border-2 border-dark ps-3">
+            <span class="text-muted small text-uppercase font-mono fw-bold d-block">System Protocol</span>
+            <span class="neo-badge badge-lime font-mono" id="systemStatusBadge">SURVEILLANCE NOMINAL</span>
+          </div>
+        </div>
+
+        <!-- Grid Layout Switcher -->
+        <div class="d-flex align-items-center gap-2">
+          <span class="small font-mono fw-bold text-muted me-1">Grid Mode:</span>
+          <button class="btn-neo btn-neo-sm btn-neo-yellow" id="btnModeGrid" onclick="setLayoutMode('2x2')">
+            <i class="bi bi-grid"></i> 2x2 Grid
+          </button>
+          <button class="btn-neo btn-neo-sm btn-neo-white" id="btnModeFocus" onclick="setLayoutMode('focus')">
+            <i class="bi bi-layout-sidebar"></i> 1+3 Focus
+          </button>
+          <a href="/api/export/csv?type=incidents" class="btn-neo btn-neo-sm btn-neo-white" title="Export incident history">
+            <i class="bi bi-download"></i> Export CSV
+          </a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Multi-Camera Surveillance Container -->
+    <div id="cctvContainer" class="cctv-grid-2x2">
+
+      <!-- Camera 01: Main Entry Concourse (Primary Live Inference Feed) -->
+      <div class="neo-card cctv-tile" id="tileCam1">
+        <div class="neo-card-header">
+          <div class="d-flex align-items-center gap-2">
+            <span class="neo-badge badge-yellow font-mono">CAM 01</span>
+            <span class="fw-bold font-display">Main Entry Concourse</span>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <span class="neo-badge badge-lime font-mono" id="cam1Status">ONLINE</span>
+            <span class="neo-badge badge-cyan font-mono" id="cam1Count">-- PERS</span>
+          </div>
+        </div>
+        <div class="cctv-screen">
+          <span class="cctv-overlay-tag">CAM-01 / NORTH WING GATE 1</span>
+          <span class="cctv-rec-tag"><span class="cctv-rec-dot"></span> REC</span>
+          <div class="cctv-scanline"></div>
+          <img src="/video_feed" id="cam1Stream" alt="Camera 01 Live Stream" />
+          <div class="cctv-controls-overlay">
+            <button class="btn-neo btn-neo-sm btn-neo-yellow" onclick="expandCamera('CAM 01: Main Entry Concourse', '/video_feed')">
+              <i class="bi bi-arrows-fullscreen"></i>
+            </button>
+            <button class="btn-neo btn-neo-sm btn-neo-white" onclick="snapshotCamera('cam1Stream')">
+              <i class="bi bi-camera"></i>
+            </button>
+          </div>
+        </div>
+        <div class="p-3 d-flex align-items-center justify-content-between font-mono small">
+          <div>
+            <span class="text-muted">Sector:</span> <span class="fw-bold">Sector Alpha</span> | 
+            <span class="text-muted">FPS:</span> <span class="fw-bold" id="cam1Fps">25.0</span>
+          </div>
+          <div class="d-flex gap-2">
+            <a href="/live_preview" class="btn-neo btn-neo-sm btn-neo-white text-decoration-none">Surveillance View</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Camera 02: East Corridor Turnstiles -->
+      <div class="neo-card cctv-tile" id="tileCam2">
+        <div class="neo-card-header">
+          <div class="d-flex align-items-center gap-2">
+            <span class="neo-badge badge-cyan font-mono">CAM 02</span>
+            <span class="fw-bold font-display">East Corridor Turnstiles</span>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <span class="neo-badge badge-lime font-mono">ONLINE</span>
+            <span class="neo-badge badge-cyan font-mono" id="cam2Count">14 PERS</span>
+          </div>
+        </div>
+        <div class="cctv-screen">
+          <span class="cctv-overlay-tag">CAM-02 / TURNSTILE BANK B</span>
+          <span class="cctv-rec-tag"><span class="cctv-rec-dot"></span> REC</span>
+          <div class="cctv-scanline"></div>
+          <canvas id="cctvCanvas2" width="640" height="360"></canvas>
+          <div class="cctv-controls-overlay">
+            <button class="btn-neo btn-neo-sm btn-neo-yellow" onclick="expandCamera('CAM 02: East Corridor Turnstiles', null, 'cctvCanvas2')">
+              <i class="bi bi-arrows-fullscreen"></i>
+            </button>
+          </div>
+        </div>
+        <div class="p-3 d-flex align-items-center justify-content-between font-mono small">
+          <div>
+            <span class="text-muted">Sector:</span> <span class="fw-bold">Sector Bravo</span> | 
+            <span class="text-muted">FPS:</span> <span class="fw-bold">25.0</span>
+          </div>
+          <span class="neo-badge badge-lime font-mono">NOMINAL</span>
+        </div>
+      </div>
+
+      <!-- Camera 03: Emergency Exit Concourse -->
+      <div class="neo-card cctv-tile" id="tileCam3">
+        <div class="neo-card-header">
+          <div class="d-flex align-items-center gap-2">
+            <span class="neo-badge badge-pink font-mono">CAM 03</span>
+            <span class="fw-bold font-display">Emergency Exit Concourse</span>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <span class="neo-badge badge-lime font-mono">ONLINE</span>
+            <span class="neo-badge badge-cyan font-mono" id="cam3Count">8 PERS</span>
+          </div>
+        </div>
+        <div class="cctv-screen">
+          <span class="cctv-overlay-tag">CAM-03 / SOUTH STAIRWELL EXIT C</span>
+          <span class="cctv-rec-tag"><span class="cctv-rec-dot"></span> REC</span>
+          <div class="cctv-scanline"></div>
+          <canvas id="cctvCanvas3" width="640" height="360"></canvas>
+          <div class="cctv-controls-overlay">
+            <button class="btn-neo btn-neo-sm btn-neo-yellow" onclick="expandCamera('CAM 03: Emergency Exit Concourse', null, 'cctvCanvas3')">
+              <i class="bi bi-arrows-fullscreen"></i>
+            </button>
+          </div>
+        </div>
+        <div class="p-3 d-flex align-items-center justify-content-between font-mono small">
+          <div>
+            <span class="text-muted">Sector:</span> <span class="fw-bold">Sector Charlie</span> | 
+            <span class="text-muted">FPS:</span> <span class="fw-bold">25.0</span>
+          </div>
+          <span class="neo-badge badge-lime font-mono">CLEAR</span>
+        </div>
+      </div>
+
+      <!-- Camera 04: West Plaza & Walkway -->
+      <div class="neo-card cctv-tile" id="tileCam4">
+        <div class="neo-card-header">
+          <div class="d-flex align-items-center gap-2">
+            <span class="neo-badge badge-lime font-mono">CAM 04</span>
+            <span class="fw-bold font-display">West Plaza & Walkway</span>
+          </div>
+          <div class="d-flex align-items-center gap-2">
+            <span class="neo-badge badge-lime font-mono">ONLINE</span>
+            <span class="neo-badge badge-cyan font-mono" id="cam4Count">19 PERS</span>
+          </div>
+        </div>
+        <div class="cctv-screen">
+          <span class="cctv-overlay-tag">CAM-04 / OPEN COURTYARD WEST</span>
+          <span class="cctv-rec-tag"><span class="cctv-rec-dot"></span> REC</span>
+          <div class="cctv-scanline"></div>
+          <canvas id="cctvCanvas4" width="640" height="360"></canvas>
+          <div class="cctv-controls-overlay">
+            <button class="btn-neo btn-neo-sm btn-neo-yellow" onclick="expandCamera('CAM 04: West Plaza & Walkway', null, 'cctvCanvas4')">
+              <i class="bi bi-arrows-fullscreen"></i>
+            </button>
+          </div>
+        </div>
+        <div class="p-3 d-flex align-items-center justify-content-between font-mono small">
+          <div>
+            <span class="text-muted">Sector:</span> <span class="fw-bold">Sector Delta</span> | 
+            <span class="text-muted">FPS:</span> <span class="fw-bold">25.0</span>
+          </div>
+          <span class="neo-badge badge-lime font-mono">NOMINAL</span>
+        </div>
+      </div>
+
+    </div>
+
+  </main>
+
+  <!-- Fullscreen Camera View Modal -->
+  <div class="modal fade" id="expandModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-centered">
+      <div class="modal-content neo-modal-content">
+        <div class="neo-modal-header d-flex align-items-center justify-content-between">
+          <h5 class="modal-title font-display fw-bold mb-0" id="expandModalTitle">Camera View</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-0">
+          <div style="background: #000; aspect-ratio: 16 / 9; width: 100%; position: relative;">
+            <img id="expandModalImg" src="" style="width: 100%; height: 100%; object-fit: contain; display: none;" />
+            <canvas id="expandModalCanvas" width="1280" height="720" style="width: 100%; height: 100%; display: none;"></canvas>
+            <div class="cctv-scanline"></div>
+          </div>
+        </div>
+        <div class="p-3 bg-white d-flex align-items-center justify-content-between border-top border-dark border-3">
+          <span class="font-mono small fw-bold">Live Stream HD / 1080p Telemetry Synchronized</span>
+          <button type="button" class="btn-neo btn-neo-sm btn-neo-yellow" data-bs-dismiss="modal">Close Feed</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Incident Simulation Modal -->
+  <div class="modal fade" id="simulateModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+      <div class="modal-content neo-modal-content">
+        <div class="neo-modal-header d-flex align-items-center justify-content-between">
+          <h5 class="modal-title font-display fw-bold mb-0">Simulate Safety Incident Drill</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body p-4">
+          <p class="small text-muted mb-3">
+            Trigger a real-time drill incident. The event will dispatch live alerts, sound the alarm siren, capture an annotated snapshot, broadcast to all dashboards, and log to the audit database.
+          </p>
+          <form id="simulateForm" onsubmit="handleSimulateSubmit(event)">
+            <div class="mb-3">
+              <label class="form-label font-mono fw-bold small text-uppercase">Incident Type</label>
+              <select id="simType" class="neo-input font-mono">
+                <option value="fall">Person Fall (Horizontal Spine Angle > 52 deg)</option>
+                <option value="collapse">Unresponsive / Collapsed Person (> 6s Stillness)</option>
+                <option value="panic">Panic Strides / Rapid Dispersal</option>
+                <option value="zone_breach">Sector Capacity Breach</option>
+                <option value="overcrowding">Sustained Overcrowding</option>
+              </select>
+            </div>
+            <div class="mb-3">
+              <label class="form-label font-mono fw-bold small text-uppercase">Target Security Sector</label>
+              <input type="text" id="simZone" class="neo-input" value="Main Entry Concourse" required />
+            </div>
+            <div class="mb-3">
+              <label class="form-label font-mono fw-bold small text-uppercase">Detection Confidence</label>
+              <input type="number" id="simConfidence" class="neo-input font-mono" min="0.5" max="1.0" step="0.01" value="0.96" required />
+            </div>
+            <div class="d-flex justify-content-end gap-2 pt-2">
+              <button type="button" class="btn-neo btn-neo-white" data-bs-dismiss="modal">Cancel</button>
+              <button type="submit" class="btn-neo btn-neo-pink">
+                <i class="bi bi-broadcast"></i> Execute Drill
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bootstrap Scripts -->
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+
+  <script>
+    // =========================================================================
+    // Fluid Cursor Lerp Physics
+    // =========================================================================
+    const dot = document.getElementById("cursorDot");
+    const follower = document.getElementById("cursorFollower");
+    let mouseX = window.innerWidth / 2;
+    let mouseY = window.innerHeight / 2;
+    let followerX = mouseX;
+    let followerY = mouseY;
+
+    window.addEventListener("mousemove", (e) => {
+      mouseX = e.clientX;
+      mouseY = e.clientY;
+      if (dot) {
+        dot.style.left = mouseX + "px";
+        dot.style.top = mouseY + "px";
+      }
+    });
+
+    function animateCursor() {
+      if (follower) {
+        followerX += (mouseX - followerX) * 0.22;
+        followerY += (mouseY - followerY) * 0.22;
+        follower.style.left = followerX + "px";
+        follower.style.top = followerY + "px";
+      }
+      requestAnimationFrame(animateCursor);
+    }
+    requestAnimationFrame(animateCursor);
+
+    document.querySelectorAll("button, a, input, select").forEach((el) => {
+      el.addEventListener("mouseenter", () => follower && follower.classList.add("hovering"));
+      el.addEventListener("mouseleave", () => follower && follower.classList.remove("hovering"));
+    });
+
+    // =========================================================================
+    // Kit Langton Rolling Numbers
+    // =========================================================================
+    function updateRollingNumber(containerId, value) {
+      const container = document.getElementById(containerId);
+      if (!container) return;
+
+      const numStr = String(value);
+      container.innerHTML = "";
+
+      for (let i = 0; i < numStr.length; i++) {
+        const ch = numStr[i];
+        if (ch >= '0' && ch <= '9') {
+          const digit = parseInt(ch, 10);
+          const reelWrap = document.createElement("span");
+          reelWrap.className = "rolling-number-wrap";
+
+          const reel = document.createElement("span");
+          reel.className = "rolling-digit-reel";
+          for (let d = 0; d <= 9; d++) {
+            const digitSpan = document.createElement("span");
+            digitSpan.textContent = String(d);
+            reel.appendChild(digitSpan);
+          }
+          reelWrap.appendChild(reel);
+          container.appendChild(reelWrap);
+
+          requestAnimationFrame(() => {
+            reel.style.transform = `translateY(-${digit * 10}%)`;
+          });
+        } else {
+          const charSpan = document.createElement("span");
+          charSpan.textContent = ch;
+          charSpan.style.fontFamily = "var(--font-mono)";
+          container.appendChild(charSpan);
+        }
+      }
+    }
+
+    // =========================================================================
+    // Layout Mode Switcher (2x2 Grid vs 1+3 Focus)
+    // =========================================================================
+    let currentLayout = "2x2";
+
+    function setLayoutMode(mode) {
+      currentLayout = mode;
+      const container = document.getElementById("cctvContainer");
+      const btnGrid = document.getElementById("btnModeGrid");
+      const btnFocus = document.getElementById("btnModeFocus");
+
+      if (mode === "2x2") {
+        container.className = "cctv-grid-2x2";
+        btnGrid.className = "btn-neo btn-neo-sm btn-neo-yellow";
+        btnFocus.className = "btn-neo btn-neo-sm btn-neo-white";
+      } else {
+        container.className = "cctv-grid-focus";
+        btnGrid.className = "btn-neo btn-neo-sm btn-neo-white";
+        btnFocus.className = "btn-neo btn-neo-sm btn-neo-yellow";
+      }
+    }
+
+    // =========================================================================
+    // Simulated CCTV Canvas Feeds (Cam 2, 3, 4)
+    // =========================================================================
+    function startSimulatedCCTV(canvasId, cameraName, basePeopleCount) {
+      const canvas = document.getElementById(canvasId);
+      if (!canvas) return;
+      const ctx = canvas.getContext("2d");
+      let count = basePeopleCount;
+
+      function renderFrame() {
+        const w = canvas.width;
+        const h = canvas.height;
+
+        // Dark CCTV environment
+        ctx.fillStyle = "#0c131a";
+        ctx.fillRect(0, 0, w, h);
+
+        // Perspective grid lines
+        ctx.strokeStyle = "rgba(166, 250, 255, 0.08)";
+        ctx.lineWidth = 1;
+        for (let y = 50; y < h; y += 35) {
+          ctx.beginPath();
+          ctx.moveTo(0, y);
+          ctx.lineTo(w, y);
+          ctx.stroke();
+        }
+        for (let x = 0; x < w; x += 60) {
+          ctx.beginPath();
+          ctx.moveTo(x, 0);
+          ctx.lineTo(x, h);
+          ctx.stroke();
+        }
+
+        // Draw simulated tracking boxes
+        const now = Date.now() / 1000;
+        for (let i = 0; i < count; i++) {
+          const px = ((Math.sin(now * 0.4 + i * 1.5) + 1) / 2) * (w - 80) + 40;
+          const py = ((Math.cos(now * 0.3 + i * 1.2) + 1) / 2) * (h - 120) + 60;
+          const bw = 24 + (i % 3) * 4;
+          const bh = 55 + (i % 3) * 8;
+
+          // Box
+          ctx.strokeStyle = "rgba(0, 210, 85, 0.85)";
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect(px, py, bw, bh);
+
+          // Corner brackets
+          ctx.strokeStyle = "#FFFFFF";
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(px, py + 6); ctx.lineTo(px, py); ctx.lineTo(px + 6, py);
+          ctx.moveTo(px + bw - 6, py); ctx.lineTo(px + bw, py); ctx.lineTo(px + bw, py + 6);
+          ctx.stroke();
+
+          // Small ID badge
+          ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
+          ctx.fillRect(px, py - 14, 38, 12);
+          ctx.fillStyle = "#A6FAFF";
+          ctx.font = "9px 'JetBrains Mono', monospace";
+          ctx.fillText(`ID ${i + 101}`, px + 2, py - 4);
+        }
+
+        // Timecode overlay
+        ctx.fillStyle = "rgba(0, 0, 0, 0.75)";
+        ctx.fillRect(10, h - 28, 220, 20);
+        ctx.fillStyle = "#FFE500";
+        ctx.font = "11px 'JetBrains Mono', monospace";
+        const dateStr = new Date().toISOString().replace('T', ' ').substring(0, 19);
+        ctx.fillText(`${dateStr} [LIVE]`, 14, h - 14);
+
+        requestAnimationFrame(renderFrame);
+      }
+      requestAnimationFrame(renderFrame);
+    }
+
+    startSimulatedCCTV("cctvCanvas2", "CAM 02", 12);
+    startSimulatedCCTV("cctvCanvas3", "CAM 03", 6);
+    startSimulatedCCTV("cctvCanvas4", "CAM 04", 18);
+
+    // =========================================================================
+    // Camera Telemetry & Stats Fetching
+    // =========================================================================
+    let privacyEnabled = false;
+
+    async function fetchCamerasTelemetry() {
+      try {
+        const res = await fetch("/api/cameras");
+        if (!res.ok) return;
+        const data = await res.json();
+
+        // Update aggregate count
+        updateRollingNumber("statTotalHeadcount", data.total_headcount || 0);
+
+        if (data.cameras && data.cameras.length > 0) {
+          const cam1 = data.cameras[0];
+          const cam1CountEl = document.getElementById("cam1Count");
+          const cam1FpsEl = document.getElementById("cam1Fps");
+          if (cam1CountEl) cam1CountEl.textContent = `${cam1.headcount} PERS`;
+          if (cam1FpsEl) cam1FpsEl.textContent = cam1.fps;
+        }
+      } catch (err) {
+        console.warn("Failed to fetch camera telemetry:", err);
+      }
+    }
+
+    // Periodic telemetry update
+    setInterval(fetchCamerasTelemetry, 2500);
+    fetchCamerasTelemetry();
+
+    // =========================================================================
+    // Privacy Mode Toggle
+    // =========================================================================
+    async function checkPrivacyStatus() {
+      try {
+        const res = await fetch("/api/settings/privacy");
+        if (res.ok) {
+          const data = await res.json();
+          privacyEnabled = Boolean(data.enabled);
+          updatePrivacyUI();
+        }
+      } catch (e) {
+        console.warn("Privacy status error:", e);
+      }
+    }
+
+    function updatePrivacyUI() {
+      const btn = document.getElementById("privacyBtn");
+      if (!btn) return;
+      if (privacyEnabled) {
+        btn.innerHTML = `<i class="bi bi-shield-lock-fill"></i> Privacy Blur: ON`;
+        btn.className = "btn-neo btn-neo-sm btn-neo-lime";
+      } else {
+        btn.innerHTML = `<i class="bi bi-shield-check"></i> Privacy Blur: OFF`;
+        btn.className = "btn-neo btn-neo-sm btn-neo-cyan";
+      }
+    }
+
+    async function togglePrivacyMode() {
+      privacyEnabled = !privacyEnabled;
+      updatePrivacyUI();
+      try {
+        await fetch("/api/settings/privacy", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ enabled: privacyEnabled })
+        });
+      } catch (err) {
+        console.error("Toggle privacy failed:", err);
+      }
+    }
+
+    checkPrivacyStatus();
+
+    // =========================================================================
+    // Expand Camera View Modal
+    // =========================================================================
+    function expandCamera(title, imgSrc, canvasSourceId) {
+      const modal = new bootstrap.Modal(document.getElementById("expandModal"));
+      document.getElementById("expandModalTitle").textContent = title;
+      const imgEl = document.getElementById("expandModalImg");
+      const canvasEl = document.getElementById("expandModalCanvas");
+
+      if (imgSrc) {
+        imgEl.src = imgSrc;
+        imgEl.style.display = "block";
+        canvasEl.style.display = "none";
+      } else if (canvasSourceId) {
+        imgEl.style.display = "none";
+        canvasEl.style.display = "block";
+        const srcCanvas = document.getElementById(canvasSourceId);
+        const destCtx = canvasEl.getContext("2d");
+        function copyFeed() {
+          if (canvasEl.style.display === "block" && srcCanvas) {
+            destCtx.drawImage(srcCanvas, 0, 0, canvasEl.width, canvasEl.height);
+            requestAnimationFrame(copyFeed);
+          }
+        }
+        copyFeed();
+      }
+
+      modal.show();
+    }
+
+    // =========================================================================
+    // Staged Incident Simulation
+    // =========================================================================
+    function openSimulateModal() {
+      const modal = new bootstrap.Modal(document.getElementById("simulateModal"));
+      modal.show();
+    }
+
+    async function handleSimulateSubmit(e) {
+      e.preventDefault();
+      const eventType = document.getElementById("simType").value;
+      const zoneName = document.getElementById("simZone").value.trim();
+      const confidence = parseFloat(document.getElementById("simConfidence").value);
+
+      try {
+        const res = await fetch("/api/incidents/simulate", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            event_type: eventType,
+            zone_name: zoneName,
+            confidence: confidence
+          })
+        });
+
+        if (res.ok) {
+          const modalEl = document.getElementById("simulateModal");
+          const modal = bootstrap.Modal.getInstance(modalEl);
+          if (modal) modal.hide();
+
+          // Flash Cam 1 border
+          const tile = document.getElementById("tileCam1");
+          if (tile) {
+            tile.style.borderColor = "var(--neo-red)";
+            tile.style.boxShadow = "8px 8px 0px var(--neo-red)";
+            setTimeout(() => {
+              tile.style.borderColor = "var(--neo-black)";
+              tile.style.boxShadow = "var(--neo-shadow-lg)";
+            }, 5000);
+          }
+        }
+      } catch (err) {
+        console.error("Simulation error:", err);
+      }
+    }
+
+    // =========================================================================
+    // Real-Time WebSocket Listener
+    // =========================================================================
+    function initWebSocket() {
+      const protocol = window.location.protocol === "https:" ? "wss:" : "ws:";
+      const wsUrl = `${protocol}//${window.location.host}/ws/events`;
+      let ws = null;
+
+      try {
+        ws = new WebSocket(wsUrl);
+        ws.onmessage = (event) => {
+          try {
+            const data = JSON.parse(event.data);
+            if (data.event_type === "telemetry") {
+              const cam1Count = document.getElementById("cam1Count");
+              if (cam1Count) cam1Count.textContent = `${data.people_count || 0} PERS`;
+              updateRollingNumber("statTotalHeadcount", (data.people_count || 0) + 36);
+            } else if (data.event_type === "safety_alert") {
+              const badge = document.getElementById("systemStatusBadge");
+              if (badge) {
+                badge.className = "neo-badge badge-red font-mono";
+                badge.textContent = `ALERT: ${(data.incident.event_type || 'INCIDENT').toUpperCase()}`;
+                setTimeout(() => {
+                  badge.className = "neo-badge badge-lime font-mono";
+                  badge.textContent = "SURVEILLANCE NOMINAL";
+                }, 10000);
+              }
+            } else if (data.event_type === "privacy_update") {
+              privacyEnabled = Boolean(data.privacy_enabled);
+              updatePrivacyUI();
+            }
+          } catch (e) {
+            console.warn("WS parse error:", e);
+          }
+        };
+        ws.onclose = () => {
+          setTimeout(initWebSocket, 4000);
+        };
+      } catch (e) {
+        console.warn("WebSocket init error:", e);
+      }
+    }
+
+    initWebSocket();
+  </script>
+</body>
+</html>

@@ -9,6 +9,9 @@ import numpy as np
 import torch
 from ultralytics import YOLO
 from deep_sort_realtime.deepsort_tracker import DeepSort
+from cms.analytics.zone_tracker import ZoneTracker
+from cms.core.pose_engine import PoseEngine
+from cms.privacy.face_blur import PrivacyManager
 
 # Configuration defaults
 CROWD_THRESHOLD = 30
@@ -79,6 +82,8 @@ class YOLOInference:
         self.video_processing_active: bool = False
         self.current_people_count: int = 0
         self.frame_lock = threading.Lock()
+        self.frame_condition = threading.Condition(self.frame_lock)
+        self.latest_jpeg_bytes: Optional[bytes] = None
         self.inference_imgsz: int = 640
 
         # Overcrowding alert parameters
@@ -89,6 +94,25 @@ class YOLOInference:
         self.last_alert_time: float = 0.0
         self.active_alert_triggered: bool = False
         self.alert_callbacks: List[Any] = []
+
+        # Pose Keypoint Intelligence & Behavioral Safety Engine (lazy load to conserve system RAM)
+        self.pose_engine = PoseEngine("yolo26n-pose.pt", lazy_load=True)
+        self.enable_pose: bool = True
+        self.pose_callbacks: List[Any] = []
+
+        # Polygonal Security Zones & Dwell Analytics Engine (default to False for clean preview)
+        self.zone_tracker = ZoneTracker()
+        self.enable_zones: bool = False
+        self.zone_callbacks: List[Any] = []
+
+        # Hardware Acceleration & Tiered Performance Profiles
+        self.use_fp16: bool = (self.device == "cuda")
+        self.hardware_profile: str = "eco"  # "eco", "balanced", "ultra", "custom"
+        self.detection_latency_ms: float = 0.0
+        self.fps_telemetry: float = 25.0
+
+        # Privacy Anonymization Engine (DPDPA 2023 / GDPR)
+        self.privacy_manager = PrivacyManager(enabled=False)
 
         # Grid-based zooming
         self.zoom_row: Optional[int] = None
@@ -157,10 +181,26 @@ class YOLOInference:
         """Safely terminate the active video processing worker."""
         with self.video_thread_lock:
             self.video_processing_active = False
+            with self.frame_condition:
+                self.frame_condition.notify_all()
             if self.video_thread is not None and self.video_thread.is_alive():
                 self.video_thread.join(timeout=2.0)
             self.video_thread = None
             self.current_video_path = None
+
+    def _publish_frame(self, frame: np.ndarray) -> None:
+        """Encode frame to JPEG in full native quality and push to all waiting stream consumers."""
+        ret, buf = cv2.imencode(".jpg", frame, [cv2.IMWRITE_JPEG_QUALITY, 85])
+        jpeg_bytes = buf.tobytes() if ret else None
+
+        with self.frame_condition:
+            if self.latest_frame is None or self.latest_frame.shape != frame.shape:
+                self.latest_frame = frame.copy()
+            else:
+                np.copyto(self.latest_frame, frame)
+            self.latest_jpeg_bytes = jpeg_bytes
+            self.frame_id += 1
+            self.frame_condition.notify_all()
 
     def reset_tracker(self) -> None:
         """Reset internal tracker state on video rewind or restart."""
@@ -193,6 +233,132 @@ class YOLOInference:
     def register_alert_callback(self, callback: Any) -> None:
         """Register callback invoked when sustained overcrowding occurs."""
         self.alert_callbacks.append(callback)
+
+    def set_pose_enabled(self, state: bool) -> None:
+        """Toggle pose estimation overlay on or off with automatic RAM/VRAM unloading."""
+        self.enable_pose = state
+        if state:
+            self.pose_engine.ensure_model_loaded()
+        else:
+            self.pose_engine.unload_model()
+        print(f"[INFO] Pose intelligence enabled: {self.enable_pose}")
+
+    def set_zones_enabled(self, state: bool) -> None:
+        """Toggle polygonal zone overlay on or off."""
+        self.enable_zones = state
+        print(f"[INFO] Zones overlay enabled: {self.enable_zones}")
+
+    def update_zones(self, zone_defs: List[Dict[str, Any]]) -> None:
+        """Update active security sectors."""
+        self.zone_tracker.set_zones(zone_defs)
+
+    def update_zone_polygon(self, zone_id: str, polygon: List[List[float]]) -> bool:
+        """Update polygon vertices of an existing zone in memory."""
+        return self.zone_tracker.update_zone_polygon(zone_id, polygon)
+
+    def get_zones_summary(self) -> List[Dict[str, Any]]:
+        """Return real-time state of all security zones."""
+        return self.zone_tracker.get_summary()
+
+    def set_hardware_profile(self, profile: str) -> Dict[str, Any]:
+        """Apply tiered hardware performance profile."""
+        p = profile.lower().strip()
+        if p == "eco":
+            self.inference_imgsz = 640
+            self.use_fp16 = (self.device == "cuda")
+            self.pose_engine.model_path = "yolo26n-pose.pt"
+            if self.enable_pose:
+                self.pose_engine.load_model("yolo26n-pose.pt")
+            self.pose_engine.set_stride(2)
+            self.pose_engine.set_fp16(self.use_fp16)
+            self.hardware_profile = "eco"
+        elif p == "balanced":
+            self.inference_imgsz = 640
+            self.use_fp16 = (self.device == "cuda")
+            self.pose_engine.model_path = "yolo26s-pose.pt"
+            if self.enable_pose:
+                self.pose_engine.load_model("yolo26s-pose.pt")
+            self.pose_engine.set_stride(1)
+            self.pose_engine.set_fp16(self.use_fp16)
+            self.hardware_profile = "balanced"
+        elif p == "ultra":
+            self.inference_imgsz = 1024
+            self.use_fp16 = (self.device == "cuda")
+            self.pose_engine.model_path = "yolo26m-pose.pt"
+            if self.enable_pose:
+                self.pose_engine.load_model("yolo26m-pose.pt")
+            self.pose_engine.set_stride(1)
+            self.pose_engine.set_fp16(self.use_fp16)
+            self.hardware_profile = "ultra"
+        else:
+            self.hardware_profile = "custom"
+        return self.get_hardware_status()
+
+    def set_pose_model(self, model_name: str) -> bool:
+        """Dynamically load or switch YOLO26 pose model."""
+        ok = self.pose_engine.load_model(model_name)
+        if ok:
+            self.hardware_profile = "custom"
+        return ok
+
+    def set_pose_stride(self, stride: int) -> None:
+        """Set pose estimation temporal frame stride."""
+        self.pose_engine.set_stride(stride)
+        self.hardware_profile = "custom"
+
+    def set_fp16_enabled(self, enabled: bool) -> None:
+        """Toggle FP16 half-precision execution on CUDA."""
+        self.use_fp16 = enabled and (self.device == "cuda")
+        self.pose_engine.set_fp16(self.use_fp16)
+        self.hardware_profile = "custom"
+
+    def get_hardware_status(self) -> Dict[str, Any]:
+        """Fetch current hardware capability and active performance configuration."""
+        gpu_name = torch.cuda.get_device_name(0) if self.device == "cuda" else "CPU Host"
+        gpu_vram_total_mb = 0
+        gpu_vram_used_mb = 0
+        if self.device == "cuda":
+            props = torch.cuda.get_device_properties(0)
+            gpu_vram_total_mb = int(props.total_memory / (1024 * 1024))
+            gpu_vram_used_mb = int(torch.cuda.memory_allocated(0) / (1024 * 1024))
+
+        return {
+            "device": self.device,
+            "gpu_name": gpu_name,
+            "vram_total_mb": gpu_vram_total_mb,
+            "vram_used_mb": gpu_vram_used_mb,
+            "profile": self.hardware_profile,
+            "inference_imgsz": self.inference_imgsz,
+            "fp16_enabled": self.use_fp16,
+            "pose_model": self.pose_engine.model_path,
+            "pose_stride": self.pose_engine.pose_stride,
+            "pose_enabled": self.enable_pose,
+            "zones_enabled": self.enable_zones,
+            "privacy_enabled": self.privacy_manager.enabled,
+            "det_latency_ms": round(self.detection_latency_ms, 1),
+            "pose_latency_ms": round(self.pose_engine.latest_latency_ms, 1),
+            "fps": round(self.fps_telemetry, 1),
+        }
+
+    def toggle_privacy(self, enabled: Optional[bool] = None) -> bool:
+        """Toggle or explicitly set real-time face privacy anonymization."""
+        if enabled is not None:
+            self.privacy_manager.set_enabled(enabled)
+        else:
+            self.privacy_manager.toggle()
+        return self.privacy_manager.enabled
+
+    def get_privacy_status(self) -> Dict[str, Any]:
+        """Return privacy anonymization state and compliance standard."""
+        return self.privacy_manager.get_status()
+
+    def register_pose_callback(self, callback: Any) -> None:
+        """Register callback invoked when a pose event (fall, collapse, panic) occurs."""
+        self.pose_callbacks.append(callback)
+
+    def register_zone_callback(self, callback: Any) -> None:
+        """Register callback invoked when a zone capacity breach occurs."""
+        self.zone_callbacks.append(callback)
 
     def check_and_trigger_alert(self, frame: np.ndarray, count: int) -> bool:
         """Evaluate sustained overcrowding condition and trigger incident logging/alerting."""
@@ -271,16 +437,19 @@ class YOLOInference:
         if self.density_map is None:
             return frame
 
-        blurred = cv2.GaussianBlur(self.density_map, (65, 65), 0)
+        # Gaussian blur on quarter-resolution density map (16x faster compute, ~200KB transient)
+        blurred = cv2.GaussianBlur(self.density_map, (17, 17), 0)
         max_val = float(blurred.max())
         if max_val > 1e-4:
             norm_map = np.uint8(255 * (blurred / max_val))
-            heatmap = cv2.applyColorMap(norm_map, cv2.COLORMAP_JET)
-            mask = norm_map > 15
-            annotated = frame.copy()
-            annotated[mask] = cv2.addWeighted(frame[mask], 0.45, heatmap[mask], 0.55, 0)
+            heatmap_small = cv2.applyColorMap(norm_map, cv2.COLORMAP_JET)
+            h, w = frame.shape[:2]
+            heatmap = cv2.resize(heatmap_small, (w, h), interpolation=cv2.INTER_LINEAR)
+            norm_full = cv2.resize(norm_map, (w, h), interpolation=cv2.INTER_NEAREST)
+            mask = norm_full > 15
+            # In-place blending without allocating extra frame copies
+            frame[mask] = cv2.addWeighted(frame[mask], 0.45, heatmap[mask], 0.55, 0)
             self.density_map *= 0.95
-            return annotated
 
         return frame
 
@@ -401,18 +570,29 @@ class YOLOInference:
     def detect_frame(self, frame: np.ndarray, conf: float = 0.35) -> Tuple[np.ndarray, int]:
         """Perform object detection on a single video frame with annotations."""
         height, width = frame.shape[:2]
-        if self.density_map is None or self.density_map.shape != (height, width):
-            self.density_map = np.zeros((height, width), dtype=np.float32)
+        dh, dw = max(1, height // 4), max(1, width // 4)
+        if self.density_map is None or self.density_map.shape != (dh, dw):
+            self.density_map = np.zeros((dh, dw), dtype=np.float32)
 
+        use_half = (self.use_fp16 and self.device == "cuda")
+        t_start = time.perf_counter()
         with torch.inference_mode():
-            results = self.model(frame, conf=conf, imgsz=self.inference_imgsz, verbose=False)
+            results = self.model(
+                frame,
+                conf=conf,
+                imgsz=self.inference_imgsz,
+                half=use_half,
+                verbose=False,
+            )
+        self.detection_latency_ms = (time.perf_counter() - t_start) * 1000.0
         raw_boxes = []
 
         for result in results:
-            if result.boxes is None:
+            if result.boxes is None or len(result.boxes) == 0:
                 continue
-            for box in result.boxes.data.cpu().numpy():
-                x1, y1, x2, y2, score, class_id = box
+            boxes_data = result.boxes.data.cpu().numpy()
+            for box in boxes_data:
+                x1, y1, x2, y2, score, class_id = box[:6]
                 if int(class_id) == 0:
                     w, h = x2 - x1, y2 - y1
                     if w < 20 or h < 35:
@@ -420,15 +600,47 @@ class YOLOInference:
                     if (x1 < 4 or x2 > width - 4) and w < 28:
                         continue
                     raw_boxes.append((int(x1), int(y1), int(x2), int(y2), float(score), None))
+        del results
 
         clean_boxes = self._nms(raw_boxes, iou_thresh=0.40)
         self.current_people_count = len(clean_boxes)
 
         for x1, y1, x2, y2, _, _ in clean_boxes:
-            cx, cy = int((x1 + x2) / 2), int((y1 + y2) / 2)
-            cv2.circle(self.density_map, (cx, cy), 35, (1.0,), thickness=-1)
+            cx, cy = int((x1 + x2) / 8), int((y1 + y2) / 8)
+            cv2.circle(self.density_map, (cx, cy), 9, (1.0,), thickness=-1)
 
         frame = self._draw_annotations(frame, clean_boxes)
+
+        # Spatial tracks extraction for zones and pose
+        active_tracks = [
+            (tid if tid is not None else (i + 1), x1, y1, x2, y2)
+            for i, (x1, y1, x2, y2, score, tid) in enumerate(clean_boxes)
+        ]
+
+        if self.enable_zones:
+            self.zone_tracker.update(active_tracks, width, height)
+            frame = self.zone_tracker.draw_zones(frame)
+
+        if self.enable_pose:
+            skeletons, _ = self.pose_engine.process_frame(
+                frame,
+                tracks=active_tracks,
+                imgsz=self.inference_imgsz,
+                half=self.use_fp16,
+            )
+            frame = self.pose_engine.draw_skeletons(frame, skeletons)
+        else:
+            skeletons = []
+
+        # Apply real-time face privacy anonymization
+        if self.privacy_manager.enabled:
+            kpts_list = [s.get("keypoints") for s in skeletons if isinstance(s, dict) and "keypoints" in s]
+            frame = self.privacy_manager.apply_face_blur(
+                frame,
+                boxes=[(b[0], b[1], b[2], b[3]) for b in clean_boxes],
+                keypoints=kpts_list,
+                in_place=True,
+            )
 
         if self.enable_heat_map:
             frame = self._apply_heatmap(frame)
@@ -438,10 +650,7 @@ class YOLOInference:
         # Trigger sustained alert evaluation
         self.check_and_trigger_alert(frame, self.current_people_count)
 
-        with self.frame_lock:
-            self.latest_frame = frame.copy()
-            self.frame_id += 1
-
+        self._publish_frame(frame)
         return frame, self.current_people_count
 
     def process_video(self, input_path: str, output_path: str, loop: bool = True) -> None:
@@ -461,9 +670,13 @@ class YOLOInference:
             fps = 25.0
 
         frame_duration = 1.0 / fps if fps > 0 else 0.04
-        self.density_map = np.zeros((height, width), dtype=np.float32)
-        fourcc = cv2.VideoWriter_fourcc(*"mp4v")
-        out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
+        dh, dw = max(1, height // 4), max(1, width // 4)
+        self.density_map = np.zeros((dh, dw), dtype=np.float32)
+        save_to_disk = (not loop) and bool(output_path)
+        out = None
+        if save_to_disk:
+            fourcc = cv2.VideoWriter_fourcc(*"mp4v")
+            out = cv2.VideoWriter(output_path, fourcc, fps, (width, height))
 
         while self.video_processing_active:
             loop_start = time.time()
@@ -476,8 +689,10 @@ class YOLOInference:
                 else:
                     break
 
-            # Run tracking
+            # Run tracking with FP16 and latency monitoring
             raw_boxes = []
+            use_half = (self.use_fp16 and self.device == "cuda")
+            t_det = time.perf_counter()
             try:
                 with torch.inference_mode():
                     track_results = self.model.track(
@@ -486,28 +701,39 @@ class YOLOInference:
                         tracker="bytetrack.yaml",
                         conf=0.35,
                         imgsz=self.inference_imgsz,
+                        half=use_half,
                         verbose=False,
                     )
                 for res in track_results:
-                    if res.boxes is None:
+                    if res.boxes is None or len(res.boxes) == 0:
                         continue
-                    for i, b in enumerate(res.boxes):
-                        cls_id = int(b.cls[0].cpu().numpy())
-                        if cls_id == 0:
-                            coords = b.xyxy[0].cpu().numpy()
-                            score = float(b.conf[0].cpu().numpy())
-                            tid = int(b.id[0].cpu().numpy()) if b.id is not None else None
-                            x1, y1, x2, y2 = coords
+                    coords_np = res.boxes.xyxy.cpu().numpy()
+                    confs_np = res.boxes.conf.cpu().numpy()
+                    clses_np = res.boxes.cls.cpu().numpy().astype(int)
+                    ids_np = res.boxes.id.cpu().numpy().astype(int) if res.boxes.id is not None else None
+
+                    for i in range(len(coords_np)):
+                        if clses_np[i] == 0:
+                            x1, y1, x2, y2 = coords_np[i]
                             w, h = x2 - x1, y2 - y1
                             if w < 20 or h < 35:
                                 continue
                             if (x1 < 4 or x2 > width - 4) and w < 28:
                                 continue
+                            score = float(confs_np[i])
+                            tid = int(ids_np[i]) if ids_np is not None else None
                             raw_boxes.append((int(x1), int(y1), int(x2), int(y2), score, tid))
+                del track_results
             except Exception:
                 # Fallback to standard inference if tracking encounters an error
                 with torch.inference_mode():
-                    res = self.model(frame, conf=0.35, imgsz=self.inference_imgsz, verbose=False)
+                    res = self.model(
+                        frame,
+                        conf=0.35,
+                        imgsz=self.inference_imgsz,
+                        half=use_half,
+                        verbose=False,
+                    )
                 for b in res[0].boxes.data.cpu().numpy():
                     if int(b[5]) == 0:
                         x1, y1, x2, y2, score, _ = b
@@ -517,17 +743,82 @@ class YOLOInference:
                         if (x1 < 4 or x2 > width - 4) and w < 28:
                             continue
                         raw_boxes.append((int(x1), int(y1), int(x2), int(y2), float(score), None))
+                del res
 
+            self.detection_latency_ms = (time.perf_counter() - t_det) * 1000.0
             clean_boxes = self._nms(raw_boxes, iou_thresh=0.40)
             self.current_people_count = len(clean_boxes)
 
-            # Update density points
+            # Update density points on quarter-resolution grid
             for x1, y1, x2, y2, _, _ in clean_boxes:
-                cx, cy = int((x1 + x2) / 2), int((y1 + y2) / 2)
-                cv2.circle(self.density_map, (cx, cy), 35, (1.0,), thickness=-1)
+                cx, cy = int((x1 + x2) / 8), int((y1 + y2) / 8)
+                cv2.circle(self.density_map, (cx, cy), 9, (1.0,), thickness=-1)
 
             # Draw unified sleek annotations
             frame = self._draw_annotations(frame, clean_boxes)
+
+            # Spatial tracks extraction for zones and pose
+            active_tracks = [
+                (tid if tid is not None else (i + 1), x1, y1, x2, y2)
+                for i, (x1, y1, x2, y2, score, tid) in enumerate(clean_boxes)
+            ]
+
+            # Update polygonal security zones
+            if self.enable_zones:
+                breached_zones = self.zone_tracker.update(active_tracks, width, height)
+                frame = self.zone_tracker.draw_zones(frame)
+                for bz in breached_zones:
+                    timestamp_str = time.strftime("%Y%m%d_%H%M%S")
+                    snap_name = f"zone_{bz['id']}_{timestamp_str}.jpg"
+                    snap_path = os.path.join(SNAPSHOT_FOLDER, snap_name)
+                    cv2.imwrite(snap_path, frame)
+                    incident = {
+                        "id": f"zone_{int(time.time())}_{bz['id']}",
+                        "event_type": "zone_breach",
+                        "zone_name": bz["name"],
+                        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+                        "current_occupancy": bz["current_occupancy"],
+                        "max_occupancy": bz["max_occupancy"],
+                        "snapshot_filename": snap_name,
+                        "snapshot_path": snap_path,
+                        "acknowledged": False,
+                    }
+                    for zcb in self.zone_callbacks:
+                        try:
+                            zcb(incident)
+                        except Exception as exc:
+                            print(f"[WARN] Zone callback error: {exc}")
+
+            # Run pose intelligence and draw skeletons
+            if self.enable_pose:
+                skeletons, new_pose_events = self.pose_engine.process_frame(
+                    frame,
+                    tracks=active_tracks,
+                    imgsz=self.inference_imgsz,
+                    half=self.use_fp16,
+                )
+                frame = self.pose_engine.draw_skeletons(frame, skeletons)
+                for pe in new_pose_events:
+                    timestamp_str = time.strftime("%Y%m%d_%H%M%S")
+                    snap_name = f"pose_{pe['event_type']}_{timestamp_str}.jpg"
+                    snap_path = os.path.join(SNAPSHOT_FOLDER, snap_name)
+                    cv2.imwrite(snap_path, frame)
+                    incident = {
+                        "id": f"pose_{int(pe['timestamp'])}_{pe['event_type']}",
+                        "event_type": pe["event_type"],
+                        "timestamp": time.strftime("%Y-%m-%d %H:%M:%S"),
+                        "confidence": pe["confidence"],
+                        "details": pe.get("details", {}),
+                        "zone_name": "Active Sector",
+                        "snapshot_filename": snap_name,
+                        "snapshot_path": snap_path,
+                        "acknowledged": False,
+                    }
+                    for pcb in self.pose_callbacks:
+                        try:
+                            pcb(incident)
+                        except Exception as exc:
+                            print(f"[WARN] Pose callback error: {exc}")
 
             # Apply heatmap overlay when toggled
             if self.enable_heat_map:
@@ -538,17 +829,37 @@ class YOLOInference:
             # Trigger sustained alert evaluation
             self.check_and_trigger_alert(frame, self.current_people_count)
 
-            out.write(frame)
-            with self.frame_lock:
-                self.latest_frame = frame.copy()
-                self.frame_id += 1
+            # Apply real-time face privacy anonymization
+            if self.privacy_manager.enabled:
+                kpts_list = [s.get("keypoints") for s in skeletons if isinstance(s, dict) and "keypoints" in s] if self.enable_pose else []
+                frame = self.privacy_manager.apply_face_blur(
+                    frame,
+                    boxes=[(b[0], b[1], b[2], b[3]) for b in clean_boxes],
+                    keypoints=kpts_list,
+                    in_place=True,
+                )
+
+            if out is not None:
+                out.write(frame)
+
+            self._publish_frame(frame)
 
             elapsed = time.time() - loop_start
-            sleep_time = max(0.001, frame_duration - elapsed)
-            time.sleep(sleep_time)
+            if elapsed > 0:
+                self.fps_telemetry = (self.fps_telemetry * 0.85) + ((1.0 / elapsed) * 0.15)
+            sleep_time = frame_duration - elapsed
+            if sleep_time > 0.002:
+                time.sleep(sleep_time)
+
+            if self.frame_id % 300 == 0:
+                import gc
+                gc.collect()
+                if self.device == "cuda":
+                    torch.cuda.empty_cache()
 
         cap.release()
-        out.release()
+        if out is not None:
+            out.release()
         self.video_processing_active = False
         print(f"[INFO] Video processing finished: {output_path}")
 
@@ -645,21 +956,25 @@ class YOLOInference:
                             verbose=False,
                         )
                     for res in track_results:
-                        if res.boxes is None:
+                        if res.boxes is None or len(res.boxes) == 0:
                             continue
-                        for i, b in enumerate(res.boxes):
-                            cls_id = int(b.cls[0].cpu().numpy())
-                            if cls_id == 0:
-                                coords = b.xyxy[0].cpu().numpy()
-                                score = float(b.conf[0].cpu().numpy())
-                                tid = int(b.id[0].cpu().numpy()) if b.id is not None else None
-                                x1, y1, x2, y2 = coords
+                        coords_np = res.boxes.xyxy.cpu().numpy()
+                        confs_np = res.boxes.conf.cpu().numpy()
+                        clses_np = res.boxes.cls.cpu().numpy().astype(int)
+                        ids_np = res.boxes.id.cpu().numpy().astype(int) if res.boxes.id is not None else None
+
+                        for i in range(len(coords_np)):
+                            if clses_np[i] == 0:
+                                x1, y1, x2, y2 = coords_np[i]
                                 w, h = x2 - x1, y2 - y1
                                 if w < 20 or h < 35:
                                     continue
                                 if (x1 < 4 or x2 > width - 4) and w < 28:
                                     continue
+                                score = float(confs_np[i])
+                                tid = int(ids_np[i]) if ids_np is not None else None
                                 raw_boxes.append((int(x1), int(y1), int(x2), int(y2), score, tid))
+                    del track_results
                 except Exception:
                     with torch.inference_mode():
                         res = self.model(frame, conf=0.35, imgsz=self.inference_imgsz, verbose=False)
@@ -672,6 +987,7 @@ class YOLOInference:
                             if (x1 < 4 or x2 > width - 4) and w < 28:
                                 continue
                             raw_boxes.append((int(x1), int(y1), int(x2), int(y2), float(score), None))
+                    del res
 
                 clean_boxes = self._nms(raw_boxes, iou_thresh=0.40)
                 count = len(clean_boxes)
@@ -687,11 +1003,22 @@ class YOLOInference:
 
                 # Draw annotations
                 annotated_frame = self._draw_annotations(frame, clean_boxes)
+
+                if self.privacy_manager.enabled:
+                    annotated_frame = self.privacy_manager.apply_face_blur(
+                        annotated_frame,
+                        boxes=[(b[0], b[1], b[2], b[3]) for b in clean_boxes],
+                        in_place=True,
+                    )
+
                 out.write(annotated_frame)
 
-                # Update live streaming frame for frontend monitor
+                # Update live streaming frame for frontend monitor with buffer reuse
                 with self.batch_frame_lock:
-                    self.batch_latest_frame = annotated_frame.copy()
+                    if self.batch_latest_frame is None or self.batch_latest_frame.shape != annotated_frame.shape:
+                        self.batch_latest_frame = annotated_frame.copy()
+                    else:
+                        np.copyto(self.batch_latest_frame, annotated_frame)
                     self.batch_frame_id += 1
 
                 # Update progress

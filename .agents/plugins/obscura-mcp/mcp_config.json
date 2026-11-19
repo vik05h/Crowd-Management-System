@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "obscura": {
+      "command": "C:\\Users\\Vikash Kumar\\AppData\\Local\\Programs\\obscura\\obscura.exe",
+      "args": ["mcp"]
+    }
+  }
+}

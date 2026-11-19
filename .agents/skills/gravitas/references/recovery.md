@@ -1,0 +1,94 @@
+# Gravitas -- Interruption Recovery Reference
+
+## The Problem
+
+Long engineering sessions in Antigravity can be interrupted by context compaction, model switches (Claude quota exhausted), or user ending and resuming a session. Without persistent state, the new context re-reads files, re-plans, and retries failed approaches.
+
+## The Solution
+
+Gravitas maintains minimal durable state that survives interruption.
+
+## State File: .gravitas/sessions/<task-id>/state.json
+
+{
+  "task_id": "add-cursor-pagination-2026-09-11",
+  "contract": "./contract.json",
+  "phase": "verify",
+  "completed_criteria": ["AC1", "AC2"],
+  "pending_criteria": ["AC3"],
+  "files_touched": ["src/routes/posts.ts", "tests/posts.test.ts"],
+  "known_failures": [],
+  "last_successful_action": "wrote cursor parameter handling in posts.ts",
+  "next_action": "run cursor pagination test suite"
+}
+
+## Evidence Ledger: .gravitas/sessions/<task-id>/evidence.jsonl
+
+Append-only log of completed verifications:
+{"criterion": "AC1", "evidence": "vitest run: 47 passed", "timestamp": "2026-09-11T02:30:00Z"}
+{"criterion": "AC2", "evidence": "diff: serializer.ts unchanged", "timestamp": "2026-09-11T02:31:00Z"}
+
+## Recovery Protocol
+
+When resuming after interruption:
+1. Check for .gravitas/sessions/ directory
+2. Find the most recent session matching the task description
+3. Read state.json -- determine current phase and pending criteria
+4. Read evidence.jsonl -- understand what has been verified
+5. Read failures.jsonl -- do not retry listed approaches
+6. Resume from next_action in state.json
+7. Re-read files that were targeted by a resolved failure before retrying completion.
+8. Treat a recorded read as current only while its recorded content hash matches
+   the file. Re-read after interruption/resume, model switch, failure resolution,
+   or a detected content change before mutating or claiming completion.
+
+The read-before-write guard accepts an existing file only when this session has
+a successful read record whose content hash still matches. Older path-only read
+records do not establish freshness and require a new read. See
+[EC-1.1 and EC-1.2](../../../docs/edge-cases.md#pillar-1-reconnaissance-before-mutation)
+for the matching edge-case guidance.
+
+## Failure Log: .gravitas/sessions/<task-id>/failures.jsonl
+
+{"approach": "direct timeout change", "reason": "test expects original value", "timestamp": "..."}
+
+Before retrying anything, check this log.
+
+## What NOT to Do After Interruption
+
+- Do not assume paths in state.json or the evidence ledger prove that files are unchanged.
+  After interruption, model switch, failure resolution, or possible external edits,
+  re-read targets before mutating or claiming completion.
+- Do not re-attempt approaches listed in failures.jsonl
+- Do not re-implement work shown complete in the evidence ledger
+- Do not start over from scratch if more than 50% of criteria are complete
+
+`gravitas resolve-failure` only permits the retry experiment; it does not
+clear the completion gate. Re-read the failed action's target after resolution
+and record fresh validator PASS evidence for any linked criteria before
+claiming completion. This is the enforcement companion to issue #57's
+recovery-documentation correction.
+
+## Anchor Upgrade (Backfill)
+
+Evidence ledgers written before user-local anchoring fail verification with
+"ledger head not anchored". On a ledger you trust, anchor its current head:
+
+```
+gravitas verify --backfill-anchors --session-dir .gravitas/sessions/<task-id>
+```
+
+Only backfill ledgers you trust — anchoring legitimizes whatever the head
+commits to. Legacy `resolved:true` failure markers without `resolution_id`
+stay unresolved by design; re-resolve them with
+`gravitas resolve-failure --session-dir … --fingerprint … --reason … --file … [--criterion-id …]`.
+
+## Circuit Breaker
+
+If recovery leads to the same failure repeatedly:
+- Same failure x2: force diagnosis mode (why is this failing?)
+- Same strategy x2: replan (this approach does not work)
+- Verification cycles >3: report blocked, request user input
+- System failure: stop cleanly, preserve state, report
+
+The circuit breaker prevents the Stop hook from creating infinite loops.

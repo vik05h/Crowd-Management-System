@@ -20,6 +20,8 @@ dependencies = [
     "uvicorn>=0.34.3",
     "setuptools>=80.9.0",
     "imageio-ffmpeg>=0.6.0",
+    "aiosqlite>=0.22.1",
+    "pyjwt>=2.15.0",
 ]
 
 [dependency-groups]
